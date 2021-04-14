@@ -82,68 +82,71 @@ app.post('/recetas', (request,response) =>{
 
 
 
-    app.put('/recetas',(request,response)=>{
-        let respuesta;
-        if(request.body.recipe_id!=null){
-            let name=request.body.recipe_name;
-            if(request.body.recipe_name.length==0){ name=null }
-            let params=[name,request.body.recipe_id]
-            let sql="UPDATE recipes SET recipe_name=COALESCE(?,recipe_name),  WHERE recipe_id=?"
-            connection.query(sql,params,(err,res)=>{
-                if (err){
-                    if (err.errno==1452){
-                        respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
-                    }else  if (err.errno==1366){
-                        respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
-                    }else{
-                        respuesta={error:true, type:0, message: err};
+app.put('/recetas',(request,response)=>{
+    let respuesta;
+    if(request.body.recipe_id!=null){
+        let name=request.body.recipe_name;
+        if(request.body.recipe_name.length==0){ name=null }
+        let params=[name,request.body.recipe_id]
+        let sql="UPDATE recipes SET recipe_name=COALESCE(?,recipe_name),  WHERE recipe_id=?"
+        connection.query(sql,params,(err,res)=>{
+            if (err){
+                if (err.errno==1452){
+                    respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
+                }else  if (err.errno==1366){
+                    respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
+                }else{
+                    respuesta={error:true, type:0, message: err};
+                }
+            }
+            else{
+                if(res.affectedRows>0){
+                    if(res.changedRows>0){
+                        respuesta={error:false, type:1, message: `receta con id ${request.body.recipe_id} modificado correctamente`};
+                    }
+                    else{
+                        respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
                     }
                 }
                 else{
-                    if(res.affectedRows>0){
-                        if(res.changedRows>0){
-                            respuesta={error:false, type:1, message: `receta con id ${request.body.recipe_id} modificado correctamente`};
-                        }
-                        else{
-                            respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
-                        }
-                    }
-                    else{
-                        respuesta={error:true, type:-3, message: `receta con id ${request.body.recipe_id} no encontrado`};
-                    }
+                    respuesta={error:true, type:-3, message: `receta con id ${request.body.recipe_id} no encontrado`};
                 }
-                response.send(respuesta)
-            })
-        }else{
-            respuesta={error:true, type:-4, message: `id del receta no especificado`};
-            response.send(respuesta);
-        }
-    })
-    
-    app.delete('/recetas',(request,response)=>{
-        let respuesta;
-        if(request.body.recipe_id!=null){
-            let params=[request.body.recipe_id];
-            let sql=`DELETE FROM recipes WHERE recipe_id=?`;
-            connection.query(sql,params,(err,res)=>{
-                if (err){
-                    respuesta={error:true, type:0, message:err};
+            }
+            response.send(respuesta)
+        })
+    }else{
+        respuesta={error:true, type:-4, message: `id del receta no especificado`};
+        response.send(respuesta);
+    }
+})
+
+app.delete('/recetas',(request,response)=>{
+    let respuesta;
+    if(request.body.recipe_id!=null){
+        let params=[request.body.recipe_id];
+        let sql=`DELETE FROM recipes WHERE recipe_id=?`;
+        connection.query(sql,params,(err,res)=>{
+            if (err){
+                respuesta={error:true, type:0, message:err};
+            }
+            else{
+                if(res.affectedRows>0){
+                    respuesta={error:false, type:1, message:` receta con id ${request.body.recipe_id} eliminado correctamente`};
                 }
                 else{
-                    if(res.affectedRows>0){
-                        respuesta={error:false, type:1, message:` receta con id ${request.body.recipe_id} eliminado correctamente`};
-                    }
-                    else{
-                        respuesta={error:true, type:-1, message:` receta con id ${request.body.recipe_id} no encontrado`};
-                    }
+                    respuesta={error:true, type:-1, message:` receta con id ${request.body.recipe_id} no encontrado`};
                 }
-                response.send(respuesta);
-            })
-        }else{
-            respuesta={error:true, type:-2, message:` id de receta no especificado`};
+            }
             response.send(respuesta);
-        }
-    })
+        })
+    }else{
+        respuesta={error:true, type:-2, message:` id de receta no especificado`};
+        response.send(respuesta);
+    }
+})
+
+
+
 
 /// DIETAS
 
@@ -176,6 +179,7 @@ app.get('/dietas',(request,response)=>{
         response.send(respuesta)
     })
 })
+
 
 app.post('/dietas', (request,response) =>{
 
@@ -272,6 +276,11 @@ app.post('/dietas', (request,response) =>{
         }
     })
 
+
+
+
+
+
 /// GRUPOS
 
 app.get('/grupos',(request,response)=>{
@@ -304,12 +313,14 @@ app.get('/grupos',(request,response)=>{
     })
 })
 
+
+
 app.post('/grupos', (request,response) =>{
 
     let respuesta;
 
-    let params=[request.body.name,request.body.color,request.body.description];
-    let sql='INSERT INTO groups (name, color, description) VALUES (?,?,?)';
+    let params=[request.body.name,request.body.color,request.body.color2,request.body.description];
+    let sql='INSERT INTO micronutrient_groups (name, color, colo2, description) VALUES (?,?,?,?)';
     connection.query(sql,params,(err,res)=>{
         if (err){
             if (err.errno==1048){
@@ -336,68 +347,68 @@ app.post('/grupos', (request,response) =>{
 
 
 
-    app.put('/grupos',(request,response)=>{
-        let respuesta;
-        if(request.body.group_id!=null){
-            let name=request.body.name;
-         
-            let params=[name,request.body.color,request.body.description,request.body.color2,request.body.group_id]
-            let sql="UPDATE micronutrient_groups SET name=COALESCE(?,name), color=COALESCE(?,color), description=COALESCE(?,description), color2=COALESCE(?,color2)  WHERE group_id=?"
-            connection.query(sql,params,(err,res)=>{
-                if (err){
-                    if (err.errno==1452){
-                        respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
-                    }else  if (err.errno==1366){
-                        respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
-                    }else{
-                        respuesta={error:true, type:0, message: err};
+app.put('/grupos',(request,response)=>{
+    let respuesta;
+    if(request.body.group_id!=null){
+        let name=request.body.name;
+        
+        let params=[name,request.body.color,request.body.description,request.body.color2,request.body.group_id]
+        let sql="UPDATE micronutrient_groups SET name=COALESCE(?,name), color=COALESCE(?,color), description=COALESCE(?,description), color2=COALESCE(?,color2)  WHERE group_id=?"
+        connection.query(sql,params,(err,res)=>{
+            if (err){
+                if (err.errno==1452){
+                    respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
+                }else  if (err.errno==1366){
+                    respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
+                }else{
+                    respuesta={error:true, type:0, message: err};
+                }
+            }
+            else{
+                if(res.affectedRows>0){
+                    if(res.changedRows>0){
+                        respuesta={error:false, type:1, message: `grupo con id ${request.body.group_id} modificado correctamente`};
+                    }
+                    else{
+                        respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
                     }
                 }
                 else{
-                    if(res.affectedRows>0){
-                        if(res.changedRows>0){
-                            respuesta={error:false, type:1, message: `grupo con id ${request.body.group_id} modificado correctamente`};
-                        }
-                        else{
-                            respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
-                        }
-                    }
-                    else{
-                        respuesta={error:true, type:-3, message: `grupo con id ${request.body.group_id} no encontrado`};
-                    }
+                    respuesta={error:true, type:-3, message: `grupo con id ${request.body.group_id} no encontrado`};
                 }
-                response.send(respuesta)
-            })
-        }else{
-            respuesta={error:true, type:-4, message: `id del grupo no especificado`};
-            response.send(respuesta);
-        }
-    })
-    
-    app.delete('/grupos',(request,response)=>{
-        let respuesta;
-        if(request.body.group_id!=null){
-            let params=[request.body.group_id];
-            let sql=`DELETE FROM groups WHERE group_id=?`;
-            connection.query(sql,params,(err,res)=>{
-                if (err){
-                    respuesta={error:true, type:0, message:err};
+            }
+            response.send(respuesta)
+        })
+    }else{
+        respuesta={error:true, type:-4, message: `id del grupo no especificado`};
+        response.send(respuesta);
+    }
+})
+
+app.delete('/grupos',(request,response)=>{
+    let respuesta;
+    if(request.body.group_id!=null){
+        let params=[request.body.group_id];
+        let sql=`DELETE FROM micronutrient_groups WHERE group_id=?`;
+        connection.query(sql,params,(err,res)=>{
+            if (err){
+                respuesta={error:true, type:0, message:err};
+            }
+            else{
+                if(res.affectedRows>0){
+                    respuesta={error:false, type:1, message:` grupo con id ${request.body.group_id} eliminado correctamente`};
                 }
                 else{
-                    if(res.affectedRows>0){
-                        respuesta={error:false, type:1, message:` grupo con id ${request.body.group_id} eliminado correctamente`};
-                    }
-                    else{
-                        respuesta={error:true, type:-1, message:` grupo con id ${request.body.group_id} no encontrado`};
-                    }
+                    respuesta={error:true, type:-1, message:` grupo con id ${request.body.group_id} no encontrado`};
                 }
-                response.send(respuesta);
-            })
-        }else{
-            respuesta={error:true, type:-2, message:` id de grupo no especificado`};
+            }
             response.send(respuesta);
-        }
-    })
+        })
+    }else{
+        respuesta={error:true, type:-2, message:` id de grupo no especificado`};
+        response.send(respuesta);
+    }
+})
 
 
 
@@ -1186,9 +1197,11 @@ app.post('/usuario',(request,response)=>{
     })
 })
 
+
+
+
 app.post('/usuario/registro',(request,response)=>{
     let respuesta;
-    let respuestaGet
     let paramsGet= [request.body.username]
     let paramsPost=[request.body.username,request.body.password,request.body.email];
     let sqlPost=`INSERT INTO users (username, password, email) VALUES (?,?,?)`;
@@ -1239,56 +1252,6 @@ app.post('/usuario/registro',(request,response)=>{
 
 
 
-app.post('/usuario/registro',(request,response)=>{
-    let respuesta;
-    let respuestaGet
-    let paramsGet= [request.body.username]
-    let paramsPost=[request.body.username,request.body.password,request.body.email];
-    let sqlPost=`INSERT INTO users (username, password, email) VALUES (?,?,?)`;
-    let sqlGet=`SELECT * FROM users WHERE username=?`
-    
-    connection.query(sqlGet,paramsGet,(err,res)=>{
-        if(err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:3, message: "el usuario " + res + " ya esta registrado"};     
-            }
-            else{
-                console.log('hola');
-                connection.query(sqlPost,paramsPost,(negativo,positivo)=>{
-                    if (negativo){
-                        if (negativo.errno==1048){
-                            respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
-                        }else  if (negativo.errno==1366){
-                            respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: negativo.sqlMessage}
-                        }else{
-                            respuesta={error:true, type:0, message: negativo};
-                        }
-                        console.log(negativo)
-                    }
-                    else{
-                        console.log(positivo)
-                        if(positivo.affectedRows>0){
-                            respuesta={error:false, type:1, message: `Usuario añadido correctamente con id ${positivo.insertId}`};
-                        }
-                        else{
-                            respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
-                        }
-                    }
-                }) 
-            }
-        } 
-        response.send(respuesta)
-    })
-
-
-})
-
-
-
-
 app.post('/usuario/login',(request,response)=>{
     let respuesta;
     let params= [request.body.username, request.body.password]
@@ -1311,48 +1274,6 @@ app.post('/usuario/login',(request,response)=>{
 
 
 
-
-
-
-
-
-
-
-
-app.get('/alergeno/ingredientes',(request,response)=>{
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.allergen_id!=null){
-        params=[request.query.allergen_id]
-        sql=`SELECT allergens.allergen_name, ingredients.ingredient_name FROM allergens 
-            JOIN allergen_ingredient ON allergen_ingredient.allergen_id=allergen.allergen_id
-            JOIN ingredients ON ingredient.ingredient_id=allergen_ingredient-ingredient_id
-            WHERE allergens.allergen_id=?`
-    }else{
-        sql=`SELECT * FROM allergens`
-    }
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            if (err.errno==1048){
-                respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
-            }else  if (err.errno==1366){
-                respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-            }else{
-                respuesta={error:true, type:0, message: err};
-            }
-        }
-        else{
-            if(res.affectedRows>0){
-                respuesta={error:false, type:1, message: `usuario añadido correctamente con id ${res.insertId}`};
-            }
-            else{
-                respuesta={error:true, type:2, message: `El usuario no se ha podido añadir a la base de datos`};
-            }
-        }
-        response.send(respuesta)
-    })
-})
 
 
 
@@ -1679,7 +1600,7 @@ app.post('/progreso',(request,response)=>{
 })
 
 
-
+// Inicializar el progreso del día en 0
 app.post('/progreso/start',(request,response)=>{
     let respuesta;
     let params=[request.body.user_id,request.body.date,request.body.micronutrient_id,request.body.percent];
