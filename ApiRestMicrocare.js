@@ -281,9 +281,9 @@ app.get('/grupos',(request,response)=>{
     let sql;
     if(request.query.group_id!=null){
         params=[request.query.group_id]
-        sql=`SELECT * FROM grupos WHERE group_id=?`
+        sql=`SELECT * FROM micronutrient_groups WHERE group_id=?`
     }else{
-        sql=`SELECT * FROM groups`
+        sql=`SELECT * FROM micronutrient_groups`
     }
     connection.query(sql,params,(err,res)=>{
         if (err){
@@ -340,9 +340,9 @@ app.post('/grupos', (request,response) =>{
         let respuesta;
         if(request.body.group_id!=null){
             let name=request.body.name;
-            if(request.body.name.length==0){ name=null }
-            let params=[name,request.body.color,request.body.description,request.body.group_id]
-            let sql="UPDATE groups SET name=COALESCE(?,name), color=COALESCE(?,color), description=COALESCE(?,description),  WHERE group_id=?"
+         
+            let params=[name,request.body.color,request.body.description,request.body.color2,request.body.group_id]
+            let sql="UPDATE micronutrient_groups SET name=COALESCE(?,name), color=COALESCE(?,color), description=COALESCE(?,description), color2=COALESCE(?,color2)  WHERE group_id=?"
             connection.query(sql,params,(err,res)=>{
                 if (err){
                     if (err.errno==1452){
@@ -1598,5 +1598,114 @@ app.get('/login',(request,response)=>{
         response.send(respuesta)
     })
 })
+
+
+
+
+
+
+
+//  PROGRESO  //
+
+
+// Obtener el progreso por grupos
+// Este post es un get, pero en formato post para proteger el id del usuario
+app.post('/progreso/grupos',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    if(request.body.user_id!=null && request.body.date!=null){
+        params=[request.body.user_id, request.body.date]
+        sql=`SELECT micronutrient_groups.name AS name, micronutrient_groups.color AS color, micronutrient_groups.color2 AS color2, micronutrient_groups.description AS description, AVG(progress.percent) AS percent FROM progress 
+        JOIN micronutrients ON micronutrients.micronutrient_id=progress.micronutrient_id 
+        JOIN micronutrient_groups ON micronutrient_groups.group_id=micronutrients.group_id 
+        WHERE progress.user_id=? AND progress.date=?
+        GROUP BY name`
+        connection.query(sql,params,(err,res)=>{
+            if (err){
+                respuesta={error:true, type:0, message: err};
+            }
+            else{
+                if(res.length>0){
+                    respuesta={error:false, code:200, type:1, message: res};
+                }else{
+                    respuesta={error:true, code:200, type:-2, message: `User ${request.body.user_id} has no progress on date ${request.body.date}`};
+                }
+            }
+            response.send(respuesta)
+            console.log('progreso/grupos')
+            console.log(respuesta)
+        })
+    }else{
+        respuesta={error:true, code:200, type:-3, message: `Missing date or user_id`};
+        response.send(respuesta)
+        console.log(respuesta)
+    }
+    
+})
+
+
+
+
+// Obtener progreso del user en una fecha
+app.post('/progreso',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    if(request.body.user_id!=null && request.body.date!=null){
+        params=[request.body.user_id, request.body.date]
+        sql=`SELECT micronutrient_id, percent FROM progress 
+        WHERE progress.user_id=? AND progress.date=?`
+        connection.query(sql,params,(err,res)=>{
+            if (err){
+                respuesta={error:true, type:0, message: err};
+            }
+            else{
+                if(res.length>0){
+                    respuesta={error:false, code:200, type:1, message: res};
+                }else{
+                    respuesta={error:false, code:200, type:-1, message: `User ${request.body.user_id} has no progress on date ${request.body.date}`};
+                }
+            }
+            response.send(respuesta)
+            console.log(respuesta)
+        })
+    }else{
+        respuesta={error:true, code:200, type:-3, message: `Missing date or user_id`};
+        response.send(respuesta)
+        console.log(respuesta)
+    }
+    
+})
+
+
+
+app.post('/progreso/start',(request,response)=>{
+    let respuesta;
+    let params=[request.body.user_id,request.body.date,request.body.micronutrient_id,request.body.percent];
+    let sql=`INSERT INTO progress (user_id, date, micronutrient_id, percent) VALUES (?,?,?,?)`;
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            if (err.errno==1048){
+                respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
+            }else  if (err.errno==1366){
+                respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+            }else{
+                respuesta={error:true, type:0, message: err};
+            }
+        }
+        else{
+            if(res.affectedRows>0){
+                respuesta={error:false, type:1, message: `progreso añadido correctamente con id ${res.insertId}`};
+            }
+            else{
+                respuesta={error:true, type:2, message: `El progreso no se ha podido añadir a la base de datos`};
+            }
+        }
+        response.send(respuesta)
+    })
+})
+
+
 
 
