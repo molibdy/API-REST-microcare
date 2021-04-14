@@ -1128,6 +1128,10 @@ app.get('/usuario',(request,response)=>{
         params=[request.query.user_id]
         sql=`SELECT * FROM users 
             WHERE user_id=?`
+    }else if(request.query.username.length>0 || request.query.email.length>0){
+        params=[request.query.username, request.query.email]
+        sql=`SELECT * FROM users 
+            WHERE username=? OR email=?`
     }else{
         sql=`SELECT * FROM users`
     }
@@ -1135,7 +1139,7 @@ app.get('/usuario',(request,response)=>{
         if (err){
             respuesta={error:true, type:0, message: err};
         }
-        else{
+        else{ console.log(res)
             if(res.length>0){
                 respuesta={error:true, code:200, type:1, message: res};
             }else{
@@ -1144,6 +1148,7 @@ app.get('/usuario',(request,response)=>{
                 }else{
                     respuesta={error:true, code:200, type:-2, message: `No hay usuarios en la base de datos`};
                 }
+                
             }
         }
         response.send(respuesta)
@@ -1393,3 +1398,36 @@ app.delete('/favorito',(request,response)=>{
         response.send(respuesta);
     }
 })
+
+
+//////LOGIN  llama a UserService y hace GET
+
+app.get('/login',(request,response)=>{
+    console.log('holii')
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.intake_id!=null){
+        params=[request.query.intake_id]
+        sql=`SELECT username, password FROM users  WHERE user_id=?`
+    }
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                if(request.query.challenge_id!=null){
+                    respuesta={error:true, code:200, type:-1, message: `No existe un usuario con ese id ${request.query.challenge_id}`};
+                }else{
+                    respuesta={error:true, code:200, type:-2, message: `No hay usuarios en la base de datos`};
+                }
+            }
+        }
+        response.send(respuesta)
+    })
+})
+
+
