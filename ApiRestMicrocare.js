@@ -1159,7 +1159,8 @@ app.get('/usuario',(request,response)=>{
 
 
 
-app.post('/usuarios',(request,response)=>{
+
+app.post('/usuario',(request,response)=>{
     let respuesta;
     let params=[request.body.username,request.body.password,request.body.email];
     let sql=`INSERT INTO users (username, password, email) VALUES (?,??)`;
@@ -1184,6 +1185,58 @@ app.post('/usuarios',(request,response)=>{
         response.send(respuesta)
     })
 })
+
+app.post('/usuario/registro',(request,response)=>{
+    let respuesta;
+    let respuestaGet
+    let paramsGet= [request.body.username]
+    let paramsPost=[request.body.username,request.body.password,request.body.email];
+    let sqlPost=`INSERT INTO users (username, password, email) VALUES (?,?,?)`;
+    let sqlGet=`SELECT * FROM users WHERE username=?`
+    
+    connection.query(sqlGet,paramsGet,(err,res)=>{
+        if(err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:3, message: "el usuario " + res + " ya esta registrado"};     
+            }
+            else{
+                console.log('hola');
+                connection.query(sqlPost,paramsPost,(negativo,positivo)=>{
+                    if (negativo){
+                        if (negativo.errno==1048){
+                            respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
+                        }else  if (negativo.errno==1366){
+                            respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: negativo.sqlMessage}
+                        }else{
+                            respuesta={error:true, type:0, message: negativo};
+                        }
+                        console.log(negativo)
+                    }
+                    else{
+                        console.log(positivo)
+                        if(positivo.affectedRows>0){
+                            respuesta={error:false, type:1, message: `Usuario añadido correctamente con id ${positivo.insertId}`};
+                        }
+                        else{
+                            respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
+                        }
+                    }
+                }) 
+            }
+        } 
+        response.send(respuesta)
+    })
+
+        
+    
+
+})
+
+
+
 
 
 app.post('/usuario/registro',(request,response)=>{
