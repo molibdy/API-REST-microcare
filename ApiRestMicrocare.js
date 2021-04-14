@@ -1128,11 +1128,13 @@ app.get('/usuario',(request,response)=>{
         params=[request.query.user_id]
         sql=`SELECT * FROM users 
             WHERE user_id=?`
-    }else if(request.query.username.length>0 || request.query.email.length>0){
-        params=[request.query.username, request.query.email]
-        sql=`SELECT * FROM users 
-            WHERE username=? OR email=?`
-    }else{
+    }else if(request.query.username!=null){
+        if(request.query.username.length>0){
+            params=[request.query.username]
+            sql=`SELECT * FROM users 
+                WHERE username=?`
+        }}
+        else{
         sql=`SELECT * FROM users`
     }
     connection.query(sql,params,(err,res)=>{
@@ -1148,7 +1150,6 @@ app.get('/usuario',(request,response)=>{
                 }else{
                     respuesta={error:true, code:200, type:-2, message: `No hay usuarios en la base de datos`};
                 }
-                
             }
         }
         response.send(respuesta)
