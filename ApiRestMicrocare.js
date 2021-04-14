@@ -1235,51 +1235,70 @@ app.post('/usuario/registro',(request,response)=>{
 
 
 
+
 app.post('/usuario/login',(request,response)=>{
     let respuesta;
-    let respuestaGet
-    let paramsGet= [request.body.username, request.body.password]
-    let paramsPost=[request.body.username,request.body.password,request.body.email];
-    let sqlPost=`INSERT INTO users (username, password, email) VALUES (?,?,?)`;
-    let sqlGet=`SELECT * FROM users WHERE username=? && password=? `
+    let params= [request.body.username, request.body.password]
+    let sql=`SELECT * FROM users WHERE username=? && password=? `
     
-    connection.query(sqlGet,paramsGet,(err,res)=>{
-        if(err){
+    connection.query(sql,params,(err,res)=>{
+        if (err){
             respuesta={error:true, type:0, message: err};
         }
         else{
             if(res.length>0){
-                respuesta={error:true, code:200, type:3, message: "el usuario " + res + " ya esta registrado"};     
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                respuesta={error:true, code:200, type:-1, message: `No existe usuario con id ${request.body.username}`};
             }
-            else{
-                console.log('hola');
-                connection.query(sqlPost,paramsPost,(negativo,positivo)=>{
-                    if (negativo){
-                        if (negativo.errno==1048){
-                            respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
-                        }else  if (negativo.errno==1366){
-                            respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: negativo.sqlMessage}
-                        }else{
-                            respuesta={error:true, type:0, message: negativo};
-                        }
-                        console.log(negativo)
-                    }
-                    else{
-                        console.log(positivo)
-                        if(positivo.affectedRows>0){
-                            respuesta={error:false, type:1, message: `Usuario añadido correctamente con id ${positivo.insertId}`};
-                        }
-                        else{
-                            respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
-                        }
-                    }
-                }) 
-            }
-        } 
+        }
         response.send(respuesta)
     })
+})
 
 
+
+
+
+
+
+
+
+
+
+app.get('/alergeno/ingredientes',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.allergen_id!=null){
+        params=[request.query.allergen_id]
+        sql=`SELECT allergens.allergen_name, ingredients.ingredient_name FROM allergens 
+            JOIN allergen_ingredient ON allergen_ingredient.allergen_id=allergen.allergen_id
+            JOIN ingredients ON ingredient.ingredient_id=allergen_ingredient-ingredient_id
+            WHERE allergens.allergen_id=?`
+    }else{
+        sql=`SELECT * FROM allergens`
+    }
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            if (err.errno==1048){
+                respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
+            }else  if (err.errno==1366){
+                respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+            }else{
+                respuesta={error:true, type:0, message: err};
+            }
+        }
+        else{
+            if(res.affectedRows>0){
+                respuesta={error:false, type:1, message: `usuario añadido correctamente con id ${res.insertId}`};
+            }
+            else{
+                respuesta={error:true, type:2, message: `El usuario no se ha podido añadir a la base de datos`};
+            }
+        }
+        response.send(respuesta)
+    })
 })
 
 
