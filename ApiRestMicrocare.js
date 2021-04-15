@@ -88,7 +88,6 @@ app.get('/recetas',(request,response)=>{
                 }
                
             } response.send(respuesta)
-            console.log(respuesta)
         }
          
        
@@ -221,7 +220,6 @@ app.get('/micronutrientes',(request,response)=>{
             }
         }
         response.send(respuesta)
-        console.log(respuesta)
     })
 })
 
