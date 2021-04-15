@@ -452,7 +452,7 @@ app.delete('/ingredientes',(request,response)=>{
 
 ///////// TABLA INTAKES
 
-app.get('/intakes',(request,response)=>{
+app.get('/ingestas',(request,response)=>{
     console.log('holii')
     let respuesta;
     let params;
@@ -488,34 +488,51 @@ app.post('/ingestas',(request,response)=>{
     let respuesta;
     let params=[request.body.user_id, request.body.date];
     let sql=`INSERT INTO intakes (user_id, date) VALUES (?,?)`;
+    let params2;
+    let sql2;
     console.log('fuera query');
+    console.log(params);
     connection.query(sql,params,(err,res)=>{
         console.log('dentro query');
 
         if (err){
-            if (err.errno==1048){
-                respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
-            }else  if (err.errno==1366){
-                respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-            }else{
-                respuesta={error:true, type:0, message: err};
-            }
+            respuesta = err;
         }
         else{
             if(res.affectedRows>0){
-                respuesta={error:false, type:1, message: `Intake añadido correctamente con id ${res.insertId}`};
+                respuesta={error:false, type:1, message: `Intake añadido correctamente con id ${res.insertId}`}
+
+                console.log(request.body.ingredientes.length);
+                for(let i=0; i<request.body.ingredientes.length; i++){
+                    console.log('dentro del for');
+                    params2 = [res.insertId, request.body.ingredientes[i].ingrediente, request.body.ingredientes[i].peso]
+                    sql2 = 'INSERT INTO intake_ingredient (intake_id, ingredient_id, grams ) VALUES (?,?,?)'
+                        connection.query(sql2,params2,(error,positivo)=>{
+                            if(err){
+                                console.log(error);
+                            }
+                            else{
+                                respuesta = {error:false, type:1, message: positivo.insertId}
+                                console.log(positivo);
+
+                            }
+                            
+                        })
+
+                }
             }
             else{
                 respuesta={error:true, type:2, message: `El intake no se ha podido añadir a la base de datos`};
             }
-        }
-        response.send(respuesta)
+        }    response.send(respuesta)
+
     })
+
 })
 
 
 
-app.put('/intakes',(request,response)=>{
+app.put('/ingestas',(request,response)=>{
     let respuesta;
     if(request.body.intake_id!=null){
         let user_id=request.body.user_id;
@@ -556,7 +573,7 @@ app.put('/intakes',(request,response)=>{
 })
 
 
-app.delete('/intakes',(request,response)=>{
+app.delete('/ingestas',(request,response)=>{
     let respuesta;
     if(request.body.intake_id!=null){
         let params=[request.body.intake_id];
@@ -581,7 +598,40 @@ app.delete('/intakes',(request,response)=>{
     }
 })
 
+ //////////// ingestas / favoritos 
+ 
+ app.post('/ingestas/favoritos',(request,response)=>{
+    let respuesta;
+    let params=[request.body.user_id, request.body.name, request.body.intake_id];
+    let sql=`INSERT INTO favourites (user_id, name, intake_id) VALUES (?,?,?)`;
 
+    console.log('fuera query');
+    console.log(params);
+    connection.query(sql,params,(err,res)=>{
+        console.log('dentro query');
+
+        if (err){
+            respuesta = err;
+        }
+        else{
+            if(res.affectedRows>0){
+                respuesta={error:false, type:1, message: res.insertId}
+                console.log(respuesta);
+
+            }
+            else{
+                respuesta={error:true, type:2, message: `El intake no se ha podido añadir a la base de datos`};
+                                console.log(respuesta);
+
+            }
+        }   response.send(respuesta)
+            console.log(respuesta);
+
+
+
+    })
+
+})
 
 
 
