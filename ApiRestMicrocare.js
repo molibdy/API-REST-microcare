@@ -16,49 +16,49 @@ let connection=mysql.createConnection({
     password: "Molibden0"
 })
 
-//////// HASH CONTRASEÑA 
+// //////// HASH CONTRASEÑA 
 
-// (A) REQUIRE CRYPTO LIBRARY
-var crypto = require('crypto');
+// // (A) REQUIRE CRYPTO LIBRARY
+// var crypto = require('crypto');
 
-// (B) CREATE PASSWORD HASH
-var creepy = function (clear) {
-  // Generate random salt
-  let length = 16;
-  let salt =  crypto.randomBytes(Math.ceil(length / 2))
-  .toString('hex') 
-  .slice(0, length); 
+// // (B) CREATE PASSWORD HASH
+// var creepy = function (clear) {
+//   // Generate random salt
+//   let length = 16;
+//   let salt =  crypto.randomBytes(Math.ceil(length / 2))
+//   .toString('hex') 
+//   .slice(0, length); 
 
-  // SHA512 at work
-  let hash = crypto.createHmac('sha512', salt);
-  hash.update(clear);
-  return {
-    salt: salt,
-    hash: hash.digest('hex')
-  };
-};
+//   // SHA512 at work
+//   let hash = crypto.createHmac('sha512', salt);
+//   hash.update(clear);
+//   return {
+//     salt: salt,
+//     hash: hash.digest('hex')
+//   };
+// };
 
-// (C) TEST ENCRYPT
-// Save BOTH the password and salt into database or file
-var clearpass = "He110Wor!d";
-var creeped = creepy(clearpass);
-console.log("===== HASHED PASSWORD + SALT =====");
-console.log(creeped);
+// // (C) TEST ENCRYPT
+// // Save BOTH the password and salt into database or file
+// var clearpass = "He110Wor!d";
+// var creeped = creepy(clearpass);
+// console.log("===== HASHED PASSWORD + SALT =====");
+// console.log(creeped);
 
-// (D) VALIDATE PASSWORD
-var validate = function (userpass, hashedpass, salt) {
-  let hash = crypto.createHmac('sha512', salt);
-  hash.update(userpass);
-  userpass = hash.digest('hex');
-  return userpass == hashedpass;
-};
+// // (D) VALIDATE PASSWORD
+// var validate = function (userpass, hashedpass, salt) {
+//   let hash = crypto.createHmac('sha512', salt);
+//   hash.update(userpass);
+//   userpass = hash.digest('hex');
+//   return userpass == hashedpass;
+// };
 
-// (E) TEST VALIDATE
-// clearpass = "FOOBAR";
-var validated = validate(clearpass, creeped.hash, creeped.salt);
-console.log("===== VALIDATION =====");
-console.log("Clear password: " + clearpass);
-console.log("Validation status: " + validated);
+// // (E) TEST VALIDATE
+// // clearpass = "FOOBAR";
+// var validated = validate(clearpass, creeped.hash, creeped.salt);
+// console.log("===== VALIDATION =====");
+// console.log("Clear password: " + clearpass);
+// console.log("Validation status: " + validated);
 
 
 
@@ -1297,7 +1297,7 @@ app.post('/usuario/registro',(request,response)=>{
 
 app.post('/usuario/login',(request,response)=>{
     let respuesta;
-    let params= [request.body.username, creepy(request.body.password)]
+    let params= [request.body.username, request.body.password]
     let sql=`SELECT user_id, profile_picture FROM users WHERE username=? && password=? `
     
     connection.query(sql,params,(err,res)=>{
