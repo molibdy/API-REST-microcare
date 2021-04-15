@@ -747,11 +747,14 @@ app.get('/intakes',(request,response)=>{
 
 
 
-app.post('/intakes',(request,response)=>{
+app.post('/ingestas',(request,response)=>{
     let respuesta;
     let params=[request.body.user_id, request.body.date];
     let sql=`INSERT INTO intakes (user_id, date) VALUES (?,?)`;
+    console.log('fuera query');
     connection.query(sql,params,(err,res)=>{
+        console.log('dentro query');
+
         if (err){
             if (err.errno==1048){
                 respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
@@ -781,7 +784,7 @@ app.put('/intakes',(request,response)=>{
         let user_id=request.body.user_id;
         if(request.body.user_id.length==0){ user_id=null }
         if(request.body.date.length==0){ date=null }
-        let params=[intake_id,request.body.date,request.body.user_id]
+        let params=[request.body.date,request.body.user_id]
 
         let sql=`UPDATE intakes SET user_id=COALESCE(?,user_id), date=COALESCE(?,date), WHERE intake_id=?`
         connection.query(sql,params,(err,res)=>{
@@ -1297,7 +1300,7 @@ app.post('/usuario/registro',(request,response)=>{
 
 app.post('/usuario/login',(request,response)=>{
     let respuesta;
-    let params= [request.body.username, creepy(request.body.password)]
+    let params= [request.body.username, request.body.password]
     let sql=`SELECT user_id, profile_picture FROM users WHERE username=? && password=? `
     
     connection.query(sql,params,(err,res)=>{
