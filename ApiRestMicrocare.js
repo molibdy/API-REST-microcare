@@ -663,7 +663,7 @@ app.post('/usuario',(request,response)=>{
 app.post('/usuario/registro',(request,response)=>{
     let respuesta;
     let paramsGet= [request.body.username]
-    let paramsPost=[request.body.username,creepy(request.body.password).hash,request.body.email];
+    let paramsPost=[request.body.username,request.body.password,request.body.email];
     let sqlPost=`INSERT INTO users (username, password, email) VALUES (?,?,?)`;
     let sqlGet=`SELECT * FROM users WHERE username=?`
     
@@ -716,7 +716,7 @@ app.post('/usuario/registro',(request,response)=>{
 app.post('/usuario/login',(request,response)=>{
     let respuesta;
     let params= [request.body.username, request.body.password]
-    let sql=`SELECT user_id, profile_picture FROM users WHERE username=? && password=? `
+    let sql=`SELECT user_id, username, profile_picture FROM users WHERE username=? && password=? `
     
     connection.query(sql,params,(err,res)=>{
         if (err){
@@ -839,9 +839,11 @@ app.post('/progreso/grupos',(request,response)=>{
         GROUP BY name`
         connection.query(sql,params,(err,res)=>{
             if (err){
+                console.log('err de /progreso/grupos')
                 respuesta={error:true, type:0, message: err};
             }
             else{
+                console.log('res de /progreso/grupos')
                 if(res.length>0){
                     respuesta={error:false, code:200, type:1, message: res};
                 }else{
@@ -864,33 +866,44 @@ app.post('/progreso/grupos',(request,response)=>{
 
 
 // Obtener progreso del user en una fecha
-app.post('/progreso',(request,response)=>{
+app.get('/progreso',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    if(request.body.user_id!=null && request.body.date!=null){
-        params=[request.body.user_id, request.body.date]
+    if(request.query.user_id!=null && request.query.date!=null){
+        params=[request.query.user_id, request.query.date]
         sql=`SELECT micronutrient_id, percent FROM progress 
         WHERE progress.user_id=? AND progress.date=?`
+    }else if(request.query.user_id!=null){  // Selecciona la media del usuario de cada día
+        params=[request.query.user_id]
+        sql=`SELECT date, AVG(percent) AS percent FROM progress 
+        WHERE progress.user_id=? 
+        GROUP BY progress.date
+        ORDER BY progress.date`
+    }else{                       // Selecciona la media de todos los users de cada día
+        params=[]
+        sql=`SELECT date, AVG(percent) AS percent FROM progress 
+        GROUP BY progress.date
+        ORDER BY progress.date`
+    }
         connection.query(sql,params,(err,res)=>{
             if (err){
+                console.log('error en /progreso')
+                console.log(err)
                 respuesta={error:true, type:0, message: err};
             }
             else{
+                console.log('res de /progreso')
+                console.log(res)
                 if(res.length>0){
                     respuesta={error:false, code:200, type:1, message: res};
                 }else{
-                    respuesta={error:false, code:200, type:-1, message: `User ${request.body.user_id} has no progress on date ${request.body.date}`};
+                    respuesta={error:false, code:200, type:-1, message: `User ${request.query.user_id} has no progress on date ${request.query.date}`};
                 }
             }
             response.send(respuesta)
             console.log(respuesta)
         })
-    }else{
-        respuesta={error:true, code:200, type:-3, message: `Missing date or user_id`};
-        response.send(respuesta)
-        console.log(respuesta)
-    }
     
 })
 
@@ -898,28 +911,43 @@ app.post('/progreso',(request,response)=>{
 // Inicializar el progreso del día en 0
 app.post('/progreso/start',(request,response)=>{
     let respuesta;
-    let params=[request.body.user_id,request.body.date,request.body.micronutrient_id,request.body.percent];
-    let sql=`INSERT INTO progress (user_id, date, micronutrient_id, percent) VALUES (?,?,?,?)`;
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            if (err.errno==1048){
-                respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
-            }else  if (err.errno==1366){
-                respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+    
+        let params=[];
+        let sql=`INSERT INTO progress (user_id, date, micronutrient_id, percent) VALUES`;
+        for(let i=1;i<39;i++){
+            if(i==38){
+                params.push(request.body.user_id,request.body.date,i,request.body.percent)
+                sql += ' (?,?,?,?)'
             }else{
-                respuesta={error:true, type:0, message: err};
+                params.push(request.body.user_id,request.body.date,i,request.body.percent)
+                sql += ' (?,?,?,?),'
             }
         }
-        else{
-            if(res.affectedRows>0){
-                respuesta={error:false, type:1, message: `progreso añadido correctamente con id ${res.insertId}`};
+        connection.query(sql,params,(err,res)=>{
+            if (err){
+                console.log('err de /progreso/start')
+                console.log(err)
+                if (err.errno==1048){
+                    respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
+                }else  if (err.errno==1366){
+                    respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+                }else{
+                    respuesta={error:true, type:0, message: err};
+                }
             }
             else{
-                respuesta={error:true, type:2, message: `El progreso no se ha podido añadir a la base de datos`};
+                console.log('res de /progreso/start')
+                console.log(res)
+                if(res.affectedRows>0){
+                    respuesta={error:false, type:1, message: `progreso añadido correctamente con id ${res.insertId}`};
+                }
+                else{
+                    respuesta={error:true, type:2, message: `El progreso no se ha podido añadir a la base de datos`};
+                }
             }
-        }
-        response.send(respuesta)
-    })
+            response.send(respuesta)
+        })
+    
 })
 
 
