@@ -16,46 +16,46 @@ let connection=mysql.createConnection({
     password: "Molibden0"
 })
 
-//////// HASH CONTRASEÑA 
+// //////// HASH CONTRASEÑA 
 
-// (A) REQUIRE CRYPTO LIBRARY
-var crypto = require('crypto');
+// // (A) REQUIRE CRYPTO LIBRARY
+// var crypto = require('crypto');
 
-// (B) CREATE PASSWORD HASH
-var creepy = function (clear) {
-  // Generate random salt
-  let length = 16;
-  let salt =  crypto.randomBytes(Math.ceil(length / 2))
-  .toString('hex') 
-  .slice(0, length); 
+// // (B) CREATE PASSWORD HASH
+// var creepy = function (clear) {
+//   // Generate random salt
+//   let length = 16;
+//   let salt =  crypto.randomBytes(Math.ceil(length / 2))
+//   .toString('hex') 
+//   .slice(0, length); 
 
-  // SHA512 at work
-  let hash = crypto.createHmac('sha512', salt);
-  hash.update(clear);
-  return {
-    salt: salt,
-    hash: hash.digest('hex')
-  };
-};
+//   // SHA512 at work
+//   let hash = crypto.createHmac('sha512', salt);
+//   hash.update(clear);
+//   return {
+//     salt: salt,
+//     hash: hash.digest('hex')
+//   };
+// };
 
-// (C) TEST ENCRYPT
-// Save BOTH the password and salt into database or file
-var clearpass = "He110Wor!d";
-var creeped = creepy(clearpass);
+// // (C) TEST ENCRYPT
+// // Save BOTH the password and salt into database or file
+// var clearpass = "He110Wor!d";
+// var creeped = creepy(clearpass);
 // console.log("===== HASHED PASSWORD + SALT =====");
 // console.log(creeped);
 
-// (D) VALIDATE PASSWORD
-var validate = function (userpass, hashedpass, salt) {
-  let hash = crypto.createHmac('sha512', salt);
-  hash.update(userpass);
-  userpass = hash.digest('hex');
-  return userpass == hashedpass;
-};
+// // (D) VALIDATE PASSWORD
+// var validate = function (userpass, hashedpass, salt) {
+//   let hash = crypto.createHmac('sha512', salt);
+//   hash.update(userpass);
+//   userpass = hash.digest('hex');
+//   return userpass == hashedpass;
+// };
 
-// (E) TEST VALIDATE
-// clearpass = "FOOBAR";
-var validated = validate(clearpass, creeped.hash, creeped.salt);
+// // (E) TEST VALIDATE
+// // clearpass = "FOOBAR";
+// var validated = validate(clearpass, creeped.hash, creeped.salt);
 // console.log("===== VALIDATION =====");
 // console.log("Clear password: " + clearpass);
 // console.log("Validation status: " + validated);
@@ -186,271 +186,6 @@ app.delete('/recetas',(request,response)=>{
         })
     }else{
         respuesta={error:true, type:-2, message:` id de receta no especificado`};
-        response.send(respuesta);
-    }
-})
-
-
-
-
-/// DIETAS
-
-app.get('/dietas',(request,response)=>{
-    console.log('dietas')
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.diets_id!=null){
-        params=[request.query.recipe_id]
-        sql=`SELECT * FROM diets WHERE recipe_id=?`
-    }else{
-        sql=`SELECT * FROM diets`
-    }
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                if(request.query.recipe_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe dieta con id ${request.query.recipe_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay recetas en la base de datos`};
-                }
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-
-app.post('/dietas', (request,response) =>{
-
-    let respuesta;
-
-    let params=[request.body.diet.name];
-    let sql='INSERT INTO diets (diet.name) VALUES (?)';
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            if (err.errno==1048){
-                respuesta={error:true, message:'faltan campos por rellenar'}
-            } else  if (err.errno==1452){
-                respuesta={error:true, message:'el id especificado para uno de los campos no existe', detalle: err.sqlMessage}
-            }else  if (err.errno==1366){
-                respuesta={error:true, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-            }else{
-                respuesta={error:true, message: err};
-            }
-        }
-        else{
-            if(res.affectedRows>0){
-                respuesta={error:false, code:200, message: `dieta añadida correctamente con id ${res.insertId}`};
-            }
-            else{
-                respuesta={error:true, code:200, message: `dieta no se ha podido añadir a la base de datos`};
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-
-
-    app.put('/dietas',(request,response)=>{
-        let respuesta;
-        if(request.body.diet_id!=null){
-            let name=request.body.diet.name;
-            if(request.body.diet.name.length==0){ name=null }
-            let params=[name,request.body.diet_id]
-            let sql="UPDATE diets SET diet.name=COALESCE(?,diet.name),  WHERE diet_id=?"
-            connection.query(sql,params,(err,res)=>{
-                if (err){
-                    if (err.errno==1452){
-                        respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
-                    }else  if (err.errno==1366){
-                        respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
-                    }else{
-                        respuesta={error:true, type:0, message: err};
-                    }
-                }
-                else{
-                    if(res.affectedRows>0){
-                        if(res.changedRows>0){
-                            respuesta={error:false, type:1, message: `dieta con id ${request.body.diet_id} modificado correctamente`};
-                        }
-                        else{
-                            respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
-                        }
-                    }
-                    else{
-                        respuesta={error:true, type:-3, message: `dieta con id ${request.body.diet_id} no encontrado`};
-                    }
-                }
-                response.send(respuesta)
-            })
-        }else{
-            respuesta={error:true, type:-4, message: `id del dieta no especificado`};
-            response.send(respuesta);
-        }
-    })
-    
-    app.delete('/dietas',(request,response)=>{
-        let respuesta;
-        if(request.body.diet_id!=null){
-            let params=[request.body.diet_id];
-            let sql=`DELETE FROM diets WHERE diet_id=?`;
-            connection.query(sql,params,(err,res)=>{
-                if (err){
-                    respuesta={error:true, type:0, message:err};
-                }
-                else{
-                    if(res.affectedRows>0){
-                        respuesta={error:false, type:1, message:` dieta con id ${request.body.diet_id} eliminado correctamente`};
-                    }
-                    else{
-                        respuesta={error:true, type:-1, message:` dieta con id ${request.body.diet_id} no encontrado`};
-                    }
-                }
-                response.send(respuesta);
-            })
-        }else{
-            respuesta={error:true, type:-2, message:` id de dieta no especificado`};
-            response.send(respuesta);
-        }
-    })
-
-
-
-
-
-
-/// GRUPOS
-
-app.get('/grupos',(request,response)=>{
-    console.log('grupos')
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.group_id!=null){
-        params=[request.query.group_id]
-        sql=`SELECT * FROM micronutrient_groups WHERE group_id=?`
-    }else{
-        sql=`SELECT * FROM micronutrient_groups`
-    }
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                if(request.query.group_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe grupo con id ${request.query.group_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay grupos en la base de datos`};
-                }
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-
-
-app.post('/grupos', (request,response) =>{
-
-    let respuesta;
-
-    let params=[request.body.name,request.body.color,request.body.color2,request.body.description];
-    let sql='INSERT INTO micronutrient_groups (name, color, colo2, description) VALUES (?,?,?,?)';
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            if (err.errno==1048){
-                respuesta={error:true, message:'faltan campos por rellenar'}
-            } else  if (err.errno==1452){
-                respuesta={error:true, message:'el id especificado para uno de los campos no existe', detalle: err.sqlMessage}
-            }else  if (err.errno==1366){
-                respuesta={error:true, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-            }else{
-                respuesta={error:true, message: err};
-            }
-        }
-        else{
-            if(res.affectedRows>0){
-                respuesta={error:false, code:200, message: `grupo añadida correctamente con id ${res.insertId}`};
-            }
-            else{
-                respuesta={error:true, code:200, message: `grupo no se ha podido añadir a la base de datos`};
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-
-
-app.put('/grupos',(request,response)=>{
-    let respuesta;
-    if(request.body.group_id!=null){
-        let name=request.body.name;
-        
-        let params=[name,request.body.color,request.body.description,request.body.color2,request.body.group_id]
-        let sql="UPDATE micronutrient_groups SET name=COALESCE(?,name), color=COALESCE(?,color), description=COALESCE(?,description), color2=COALESCE(?,color2)  WHERE group_id=?"
-        connection.query(sql,params,(err,res)=>{
-            if (err){
-                if (err.errno==1452){
-                    respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
-                }else  if (err.errno==1366){
-                    respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
-                }else{
-                    respuesta={error:true, type:0, message: err};
-                }
-            }
-            else{
-                if(res.affectedRows>0){
-                    if(res.changedRows>0){
-                        respuesta={error:false, type:1, message: `grupo con id ${request.body.group_id} modificado correctamente`};
-                    }
-                    else{
-                        respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
-                    }
-                }
-                else{
-                    respuesta={error:true, type:-3, message: `grupo con id ${request.body.group_id} no encontrado`};
-                }
-            }
-            response.send(respuesta)
-        })
-    }else{
-        respuesta={error:true, type:-4, message: `id del grupo no especificado`};
-        response.send(respuesta);
-    }
-})
-
-app.delete('/grupos',(request,response)=>{
-    let respuesta;
-    if(request.body.group_id!=null){
-        let params=[request.body.group_id];
-        let sql=`DELETE FROM micronutrient_groups WHERE group_id=?`;
-        connection.query(sql,params,(err,res)=>{
-            if (err){
-                respuesta={error:true, type:0, message:err};
-            }
-            else{
-                if(res.affectedRows>0){
-                    respuesta={error:false, type:1, message:` grupo con id ${request.body.group_id} eliminado correctamente`};
-                }
-                else{
-                    respuesta={error:true, type:-1, message:` grupo con id ${request.body.group_id} no encontrado`};
-                }
-            }
-            response.send(respuesta);
-        })
-    }else{
-        respuesta={error:true, type:-2, message:` id de grupo no especificado`};
         response.send(respuesta);
     }
 })
@@ -847,329 +582,6 @@ app.delete('/intakes',(request,response)=>{
 })
 
 
-////// TABLA CHALLENGE
-
-
-app.get('/challenge',(request,response)=>{
-    console.log('holii')
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.challenge_id!=null){
-        params=[request.query.challenge_id]
-        sql=`SELECT * FROM challenge  WHERE challenge_id=?`
-    }else{
-        sql=`SELECT * FROM challenge`
-    }
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                if(request.query.challenge_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe un challenge con id ${request.query.challenge_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay challenge en la base de datos`};
-                }
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-
-app.post('/challenge',(request,response)=>{
-    let respuesta;
-    let params=[request.body.name, request.body.ingredient_id, request.body.grams];
-    let sql=`INSERT INTO challenge (name,ingredient_id, grmas) VALUES (?,?,?)`;
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            if (err.errno==1048){
-                respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
-            }else  if (err.errno==1366){
-                respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-            }else{
-                respuesta={error:true, type:0, message: err};
-            }
-        }
-        else{
-            if(res.affectedRows>0){
-                respuesta={error:false, type:1, message: `challenge añadido correctamente con id ${res.insertId}`};
-            }
-            else{
-                respuesta={error:true, type:2, message: `El challenge no se ha podido añadir a la base de datos`};
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-app.put('/challenge',(request,response)=>{
-    let respuesta;
-    if(request.body.challenge_id!=null){
-        let name=request.body.name;
-        if(request.body.name.length==0){ name=null }
-        let params=[name,request.body.ingredient_id,request.body.grams]
-
-        let sql=`UPDATE challenge SET name=COALESCE(?,name), ingredient_id=COALESCE(?,ingredient_id), grams=COALESCE(?,grams), WHERE challenge_id=?`
-        connection.query(sql,params,(err,res)=>{
-            if (err){
-                if (err.errno==1452){
-                    respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
-                }else  if (err.errno==1366){
-                    respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-                }else{
-                    respuesta={error:true, type:0, message: err};
-                }
-            }
-            else{
-                if(res.affectedRows>0){
-                    if(res.changedRows>0){
-                        respuesta={error:false, type:1, message: `challenge con id ${request.body.challenge_id} modificado correctamente`};
-                    }
-                    else{
-                        respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
-                    }
-                }
-                else{
-                    respuesta={error:true, type:-3, message: `challenge con id ${request.body.challenge_id} no encontrado`};
-                }
-            }
-            response.send(respuesta)
-        })
-    }else{
-        respuesta={error:true, type:-4, message: `id del challenge no especificado`};
-        response.send(respuesta);
-    }
-})
-
-app.delete('/challenge',(request,response)=>{
-    let respuesta;
-    if(request.body.challenge_id!=null){
-        let params=[request.body.challenge_id];
-        let sql=`DELETE FROM challenge WHERE challenge_id=?`;
-        connection.query(sql,params,(err,res)=>{
-            if (err){   
-                respuesta={error:true, type:0, message:err};
-            }
-            else{
-                if(res.affectedRows>0){
-                    respuesta={error:false, type:1, message: `challenge con id ${request.body.challenge_id} eliminado correctamente`};
-                }
-                else{
-                    respuesta={error:true, type:-1, message: `challenge con id ${request.body.challenge_id} no encontrado`};
-                }
-            }
-            response.send(respuesta);
-        })
-    }else{
-        respuesta={error:true, type:-2, message: `id de challenge no especificado`};
-        response.send(respuesta);
-    }
-})
-
-
-
-////   TABLA ALLERGENS ////
-
-
-app.get('/alergeno',(request,response)=>{
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.allergen_id!=null){
-        params=[request.query.allergen_id]
-        sql=`SELECT * FROM allergens 
-            WHERE allergen_id=?`
-    }else{
-        sql=`SELECT * FROM allergens`
-    }
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                if(request.query.disco_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe alergeno con id ${request.query.allergen_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay alergenos en la base de datos`};
-                }
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-
-
-
-
-app.get('/alergeno/ingredientes',(request,response)=>{
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.allergen_id!=null){
-        params=[request.query.allergen_id]
-        sql=`SELECT allergens.allergen_name, ingredients.ingredient_name FROM allergens 
-            JOIN allergen_ingredient ON allergen_ingredient.allergen_id=allergen.allergen_id
-            JOIN ingredients ON ingredient.ingredient_id=allergen_ingredient-ingredient_id
-            WHERE allergens.allergen_id=?`
-    }else{
-        sql=`SELECT * FROM allergens`
-    }
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                if(request.query.allergen_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe alergeno con id ${request.query.allergen_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay alergenos en la base de datos`};
-                }
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-
-
-app.post('/alergeno',(request,response)=>{
-    let respuesta;
-    let params=[request.body.allergen_name];
-    let sql=`INSERT INTO allergens (allergen_name) VALUES (?)`;
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            if (err.errno==1048){
-                respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
-            }else  if (err.errno==1366){
-                respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-            }else{
-                respuesta={error:true, type:0, message: err};
-            }
-        }
-        else{
-            if(res.affectedRows>0){
-                respuesta={error:false, type:1, message: `alergeno añadido correctamente con id ${res.insertId}`};
-            }
-            else{
-                respuesta={error:true, type:2, message: `El alergeno no se ha podido añadir a la base de datos`};
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-
-app.post('/alergeno/ingredientes',(request,response)=>{
-    let respuesta;
-    let params=[request.body.allergen_id, request.body.ingredient_id];
-    let sql=`INSERT INTO allergen_ingredient (allergen_id,ingredient_id) VALUES (?,?)`;
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            if (err.errno==1048){
-                respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
-            }else  if (err.errno==1366){
-                respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-            }else{
-                respuesta={error:true, type:0, message: err};
-            }
-        }
-        else{
-            if(res.affectedRows>0){
-   
-                respuesta={error:false, type:1, message: `ingrediente añadido correctamente con id ${res.insertId}`};
-            }
-            else{
-                respuesta={error:true, type:2, message: `El ingrediente no se ha podido añadir a la base de datos`};
-            }
-        }
-        response.send(respuesta)
-    })
-})
- 
-
-
-
-
-
-
-app.put('/alergeno',(request,response)=>{
-    let respuesta;
-    if(request.body.allergen_id!=null){
-        let name=request.body.name;
-        if(request.body.name.length==0){ name=null }
-        let params=[name,request.body.allergen_id]
-
-        let sql=`UPDATE allergens SET name=COALESCE(?,name)  WHERE allergen_id=?`
-        connection.query(sql,params,(err,res)=>{
-            if (err){
-                if (err.errno==1452){
-                    respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
-                }else  if (err.errno==1366){
-                    respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-                }else{
-                    respuesta={error:true, type:0, message: err};
-                }
-            }
-            else{
-                if(res.affectedRows>0){
-                    if(res.changedRows>0){
-                        respuesta={error:false, type:1, message: `alergeno con id ${request.body.allergen_id} modificado correctamente`};
-                    }
-                    else{
-                        respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
-                    }
-                }
-                else{
-                    respuesta={error:true, type:-3, message: `alergeno con id ${request.body.allergen_id} no encontrado`};
-                }
-            }
-            response.send(respuesta)
-        })
-    }else{
-        respuesta={error:true, type:-4, message: `id del alergeno no especificado`};
-        response.send(respuesta);
-    }
-})
-
-
-
-
-app.delete('/alergeno',(request,response)=>{
-    let respuesta;
-    if(request.body.allergen_id!=null){
-        let params=[request.body.allergen_id];
-        let sql=`DELETE FROM allergens WHERE allergen_id=?`;
-        connection.query(sql,params,(err,res)=>{
-            if (err){   
-                respuesta={error:true, type:0, message:err};
-            }
-            else{
-                if(res.affectedRows>0){
-                    respuesta={error:false, type:1, message: `allergen con id ${request.body.allergen_id} eliminado correctamente`};
-                }
-                else{
-                    respuesta={error:true, type:-1, message: `allergen con id ${request.body.allergen_id} no encontrado`};
-                }
-            }
-            response.send(respuesta);
-        })
-    }else{
-        respuesta={error:true, type:-2, message: `id de allergen no especificado`};
-        response.send(respuesta);
-    }
-})
 
 
 
@@ -1403,172 +815,6 @@ app.delete('/usuario',(request,response)=>{
 
 
 
-//  favoritos  //
-
-app.get('/favorito',(request,response)=>{
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.favourite_id!=null){
-        params=[request.query.favourite_id]
-        sql=`SELECT * FROM favourites 
-            WHERE favourite_id=?`
-    }else{
-        sql=`SELECT * FROM favourites`
-    }
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                if(request.query.favourite_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe favorito con id ${request.query.favourite_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay favoritos en la base de datos`};
-                }
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-
-
-
-app.post('/favoritos',(request,response)=>{
-    let respuesta;
-    let params=[request.body.name,request.body.password,request.body.email];
-    let sql=`INSERT INTO favourites (name, password, email) VALUES (?,??)`;
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            if (err.errno==1048){
-                respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
-            }else  if (err.errno==1366){
-                respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-            }else{
-                respuesta={error:true, type:0, message: err};
-            }
-        }
-        else{
-            if(res.affectedRows>0){
-                respuesta={error:false, type:1, message: `Disco añadido correctamente con id ${res.insertId}`};
-            }
-            else{
-                respuesta={error:true, type:2, message: `El disco no se ha podido añadir a la base de datos`};
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
-
-
-
-app.put('/favorito',(request,response)=>{
-    let respuesta;
-    if(request.body.favourite_id!=null){
-        let name=request.body.name;
-        let password=request.body.password;
-        let email=request.body.email;
-        if(request.body.name.length==0){ name=null }
-        if(request.body.password.length==0){ password=null }
-        if(request.body.email.length==0){ email=null }
-        let params=[name,password,email,request.body.favourite_id]
-
-        let sql=`UPDATE favourites SET name=COALESCE(?,name), password=COALESCE(?,password), email=COALESCE(?,email) WHERE favourite_id=?`
-        connection.query(sql,params,(err,res)=>{
-            if (err){
-                if (err.errno==1452){
-                    respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
-                }else  if (err.errno==1366){
-                    respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-                }else{
-                    respuesta={error:true, type:0, message: err};
-                }
-            }
-            else{
-                if(res.affectedRows>0){
-                    if(res.changedRows>0){
-                        respuesta={error:false, type:1, message: `favorito con id ${request.body.favourite_id} modificado correctamente`};
-                    }
-                    else{
-                        respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
-                    }
-                }
-                else{
-                    respuesta={error:true, type:-3, message: `favorito con id ${request.body.favourite_id} no encontrado`};
-                }
-            }
-            response.send(respuesta)
-        })
-    }else{
-        respuesta={error:true, type:-4, message: `id del favorito no especificado`};
-        response.send(respuesta);
-    }
-})
-
-
-
-
-app.delete('/favorito',(request,response)=>{
-    let respuesta;
-    if(request.body.favourite_id!=null){
-        let params=[request.body.favourite_id];
-        let sql=`DELETE FROM favourites WHERE favourite_id=?`;
-        connection.query(sql,params,(err,res)=>{
-            if (err){   
-                respuesta={error:true, type:0, message:err};
-            }
-            else{
-                if(res.affectedRows>0){
-                    respuesta={error:false, type:1, message: `favourite con id ${request.body.favourite_id} eliminado correctamente`};
-                }
-                else{
-                    respuesta={error:true, type:-1, message: `favourite con id ${request.body.favourite_id} no encontrado`};
-                }
-            }
-            response.send(respuesta);
-        })
-    }else{
-        respuesta={error:true, type:-2, message: `id de favourite no especificado`};
-        response.send(respuesta);
-    }
-})
-
-
-//////LOGIN  llama a UserService y hace GET
-
-app.get('/login',(request,response)=>{
-    console.log('holii')
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.intake_id!=null){
-        params=[request.query.intake_id]
-        sql=`SELECT username, password FROM users  WHERE user_id=?`
-    }
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                if(request.query.challenge_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe un usuario con ese id ${request.query.challenge_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay usuarios en la base de datos`};
-                }
-            }
-        }
-        response.send(respuesta)
-    })
-})
-
 
 
 
@@ -1675,6 +921,743 @@ app.post('/progreso/start',(request,response)=>{
         response.send(respuesta)
     })
 })
+
+
+
+
+
+// /// DIETAS
+
+// app.get('/dietas',(request,response)=>{
+//     console.log('dietas')
+//     let respuesta;
+//     let params;
+//     let sql;
+//     if(request.query.diets_id!=null){
+//         params=[request.query.recipe_id]
+//         sql=`SELECT * FROM diets WHERE recipe_id=?`
+//     }else{
+//         sql=`SELECT * FROM diets`
+//     }
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             respuesta={error:true, type:0, message: err};
+//         }
+//         else{
+//             if(res.length>0){
+//                 respuesta={error:true, code:200, type:1, message: res};
+//             }else{
+//                 if(request.query.recipe_id!=null){
+//                     respuesta={error:true, code:200, type:-1, message: `No existe dieta con id ${request.query.recipe_id}`};
+//                 }else{
+//                     respuesta={error:true, code:200, type:-2, message: `No hay recetas en la base de datos`};
+//                 }
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+
+// app.post('/dietas', (request,response) =>{
+
+//     let respuesta;
+
+//     let params=[request.body.diet.name];
+//     let sql='INSERT INTO diets (diet.name) VALUES (?)';
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             if (err.errno==1048){
+//                 respuesta={error:true, message:'faltan campos por rellenar'}
+//             } else  if (err.errno==1452){
+//                 respuesta={error:true, message:'el id especificado para uno de los campos no existe', detalle: err.sqlMessage}
+//             }else  if (err.errno==1366){
+//                 respuesta={error:true, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+//             }else{
+//                 respuesta={error:true, message: err};
+//             }
+//         }
+//         else{
+//             if(res.affectedRows>0){
+//                 respuesta={error:false, code:200, message: `dieta añadida correctamente con id ${res.insertId}`};
+//             }
+//             else{
+//                 respuesta={error:true, code:200, message: `dieta no se ha podido añadir a la base de datos`};
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+
+
+//     app.put('/dietas',(request,response)=>{
+//         let respuesta;
+//         if(request.body.diet_id!=null){
+//             let name=request.body.diet.name;
+//             if(request.body.diet.name.length==0){ name=null }
+//             let params=[name,request.body.diet_id]
+//             let sql="UPDATE diets SET diet.name=COALESCE(?,diet.name),  WHERE diet_id=?"
+//             connection.query(sql,params,(err,res)=>{
+//                 if (err){
+//                     if (err.errno==1452){
+//                         respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
+//                     }else  if (err.errno==1366){
+//                         respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
+//                     }else{
+//                         respuesta={error:true, type:0, message: err};
+//                     }
+//                 }
+//                 else{
+//                     if(res.affectedRows>0){
+//                         if(res.changedRows>0){
+//                             respuesta={error:false, type:1, message: `dieta con id ${request.body.diet_id} modificado correctamente`};
+//                         }
+//                         else{
+//                             respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
+//                         }
+//                     }
+//                     else{
+//                         respuesta={error:true, type:-3, message: `dieta con id ${request.body.diet_id} no encontrado`};
+//                     }
+//                 }
+//                 response.send(respuesta)
+//             })
+//         }else{
+//             respuesta={error:true, type:-4, message: `id del dieta no especificado`};
+//             response.send(respuesta);
+//         }
+//     })
+    
+//     app.delete('/dietas',(request,response)=>{
+//         let respuesta;
+//         if(request.body.diet_id!=null){
+//             let params=[request.body.diet_id];
+//             let sql=`DELETE FROM diets WHERE diet_id=?`;
+//             connection.query(sql,params,(err,res)=>{
+//                 if (err){
+//                     respuesta={error:true, type:0, message:err};
+//                 }
+//                 else{
+//                     if(res.affectedRows>0){
+//                         respuesta={error:false, type:1, message:` dieta con id ${request.body.diet_id} eliminado correctamente`};
+//                     }
+//                     else{
+//                         respuesta={error:true, type:-1, message:` dieta con id ${request.body.diet_id} no encontrado`};
+//                     }
+//                 }
+//                 response.send(respuesta);
+//             })
+//         }else{
+//             respuesta={error:true, type:-2, message:` id de dieta no especificado`};
+//             response.send(respuesta);
+//         }
+//     })
+
+
+
+
+
+
+// /// GRUPOS
+
+// app.get('/grupos',(request,response)=>{
+//     console.log('grupos')
+//     let respuesta;
+//     let params;
+//     let sql;
+//     if(request.query.group_id!=null){
+//         params=[request.query.group_id]
+//         sql=`SELECT * FROM micronutrient_groups WHERE group_id=?`
+//     }else{
+//         sql=`SELECT * FROM micronutrient_groups`
+//     }
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             respuesta={error:true, type:0, message: err};
+//         }
+//         else{
+//             if(res.length>0){
+//                 respuesta={error:true, code:200, type:1, message: res};
+//             }else{
+//                 if(request.query.group_id!=null){
+//                     respuesta={error:true, code:200, type:-1, message: `No existe grupo con id ${request.query.group_id}`};
+//                 }else{
+//                     respuesta={error:true, code:200, type:-2, message: `No hay grupos en la base de datos`};
+//                 }
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+
+
+// app.post('/grupos', (request,response) =>{
+
+//     let respuesta;
+
+//     let params=[request.body.name,request.body.color,request.body.color2,request.body.description];
+//     let sql='INSERT INTO micronutrient_groups (name, color, colo2, description) VALUES (?,?,?,?)';
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             if (err.errno==1048){
+//                 respuesta={error:true, message:'faltan campos por rellenar'}
+//             } else  if (err.errno==1452){
+//                 respuesta={error:true, message:'el id especificado para uno de los campos no existe', detalle: err.sqlMessage}
+//             }else  if (err.errno==1366){
+//                 respuesta={error:true, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+//             }else{
+//                 respuesta={error:true, message: err};
+//             }
+//         }
+//         else{
+//             if(res.affectedRows>0){
+//                 respuesta={error:false, code:200, message: `grupo añadida correctamente con id ${res.insertId}`};
+//             }
+//             else{
+//                 respuesta={error:true, code:200, message: `grupo no se ha podido añadir a la base de datos`};
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+
+
+// app.put('/grupos',(request,response)=>{
+//     let respuesta;
+//     if(request.body.group_id!=null){
+//         let name=request.body.name;
+        
+//         let params=[name,request.body.color,request.body.description,request.body.color2,request.body.group_id]
+//         let sql="UPDATE micronutrient_groups SET name=COALESCE(?,name), color=COALESCE(?,color), description=COALESCE(?,description), color2=COALESCE(?,color2)  WHERE group_id=?"
+//         connection.query(sql,params,(err,res)=>{
+//             if (err){
+//                 if (err.errno==1452){
+//                     respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
+//                 }else  if (err.errno==1366){
+//                     respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
+//                 }else{
+//                     respuesta={error:true, type:0, message: err};
+//                 }
+//             }
+//             else{
+//                 if(res.affectedRows>0){
+//                     if(res.changedRows>0){
+//                         respuesta={error:false, type:1, message: `grupo con id ${request.body.group_id} modificado correctamente`};
+//                     }
+//                     else{
+//                         respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
+//                     }
+//                 }
+//                 else{
+//                     respuesta={error:true, type:-3, message: `grupo con id ${request.body.group_id} no encontrado`};
+//                 }
+//             }
+//             response.send(respuesta)
+//         })
+//     }else{
+//         respuesta={error:true, type:-4, message: `id del grupo no especificado`};
+//         response.send(respuesta);
+//     }
+// })
+
+// app.delete('/grupos',(request,response)=>{
+//     let respuesta;
+//     if(request.body.group_id!=null){
+//         let params=[request.body.group_id];
+//         let sql=`DELETE FROM micronutrient_groups WHERE group_id=?`;
+//         connection.query(sql,params,(err,res)=>{
+//             if (err){
+//                 respuesta={error:true, type:0, message:err};
+//             }
+//             else{
+//                 if(res.affectedRows>0){
+//                     respuesta={error:false, type:1, message:` grupo con id ${request.body.group_id} eliminado correctamente`};
+//                 }
+//                 else{
+//                     respuesta={error:true, type:-1, message:` grupo con id ${request.body.group_id} no encontrado`};
+//                 }
+//             }
+//             response.send(respuesta);
+//         })
+//     }else{
+//         respuesta={error:true, type:-2, message:` id de grupo no especificado`};
+//         response.send(respuesta);
+//     }
+// })
+
+
+
+
+
+
+// ////// TABLA CHALLENGE
+
+
+// app.get('/challenge',(request,response)=>{
+//     console.log('holii')
+//     let respuesta;
+//     let params;
+//     let sql;
+//     if(request.query.challenge_id!=null){
+//         params=[request.query.challenge_id]
+//         sql=`SELECT * FROM challenge  WHERE challenge_id=?`
+//     }else{
+//         sql=`SELECT * FROM challenge`
+//     }
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             respuesta={error:true, type:0, message: err};
+//         }
+//         else{
+//             if(res.length>0){
+//                 respuesta={error:true, code:200, type:1, message: res};
+//             }else{
+//                 if(request.query.challenge_id!=null){
+//                     respuesta={error:true, code:200, type:-1, message: `No existe un challenge con id ${request.query.challenge_id}`};
+//                 }else{
+//                     respuesta={error:true, code:200, type:-2, message: `No hay challenge en la base de datos`};
+//                 }
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+
+// app.post('/challenge',(request,response)=>{
+//     let respuesta;
+//     let params=[request.body.name, request.body.ingredient_id, request.body.grams];
+//     let sql=`INSERT INTO challenge (name,ingredient_id, grmas) VALUES (?,?,?)`;
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             if (err.errno==1048){
+//                 respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
+//             }else  if (err.errno==1366){
+//                 respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+//             }else{
+//                 respuesta={error:true, type:0, message: err};
+//             }
+//         }
+//         else{
+//             if(res.affectedRows>0){
+//                 respuesta={error:false, type:1, message: `challenge añadido correctamente con id ${res.insertId}`};
+//             }
+//             else{
+//                 respuesta={error:true, type:2, message: `El challenge no se ha podido añadir a la base de datos`};
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+// app.put('/challenge',(request,response)=>{
+//     let respuesta;
+//     if(request.body.challenge_id!=null){
+//         let name=request.body.name;
+//         if(request.body.name.length==0){ name=null }
+//         let params=[name,request.body.ingredient_id,request.body.grams]
+
+//         let sql=`UPDATE challenge SET name=COALESCE(?,name), ingredient_id=COALESCE(?,ingredient_id), grams=COALESCE(?,grams), WHERE challenge_id=?`
+//         connection.query(sql,params,(err,res)=>{
+//             if (err){
+//                 if (err.errno==1452){
+//                     respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
+//                 }else  if (err.errno==1366){
+//                     respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+//                 }else{
+//                     respuesta={error:true, type:0, message: err};
+//                 }
+//             }
+//             else{
+//                 if(res.affectedRows>0){
+//                     if(res.changedRows>0){
+//                         respuesta={error:false, type:1, message: `challenge con id ${request.body.challenge_id} modificado correctamente`};
+//                     }
+//                     else{
+//                         respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
+//                     }
+//                 }
+//                 else{
+//                     respuesta={error:true, type:-3, message: `challenge con id ${request.body.challenge_id} no encontrado`};
+//                 }
+//             }
+//             response.send(respuesta)
+//         })
+//     }else{
+//         respuesta={error:true, type:-4, message: `id del challenge no especificado`};
+//         response.send(respuesta);
+//     }
+// })
+
+// app.delete('/challenge',(request,response)=>{
+//     let respuesta;
+//     if(request.body.challenge_id!=null){
+//         let params=[request.body.challenge_id];
+//         let sql=`DELETE FROM challenge WHERE challenge_id=?`;
+//         connection.query(sql,params,(err,res)=>{
+//             if (err){   
+//                 respuesta={error:true, type:0, message:err};
+//             }
+//             else{
+//                 if(res.affectedRows>0){
+//                     respuesta={error:false, type:1, message: `challenge con id ${request.body.challenge_id} eliminado correctamente`};
+//                 }
+//                 else{
+//                     respuesta={error:true, type:-1, message: `challenge con id ${request.body.challenge_id} no encontrado`};
+//                 }
+//             }
+//             response.send(respuesta);
+//         })
+//     }else{
+//         respuesta={error:true, type:-2, message: `id de challenge no especificado`};
+//         response.send(respuesta);
+//     }
+// })
+
+
+
+// ////   TABLA ALLERGENS ////
+
+
+// app.get('/alergeno',(request,response)=>{
+//     let respuesta;
+//     let params;
+//     let sql;
+//     if(request.query.allergen_id!=null){
+//         params=[request.query.allergen_id]
+//         sql=`SELECT * FROM allergens 
+//             WHERE allergen_id=?`
+//     }else{
+//         sql=`SELECT * FROM allergens`
+//     }
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             respuesta={error:true, type:0, message: err};
+//         }
+//         else{
+//             if(res.length>0){
+//                 respuesta={error:true, code:200, type:1, message: res};
+//             }else{
+//                 if(request.query.disco_id!=null){
+//                     respuesta={error:true, code:200, type:-1, message: `No existe alergeno con id ${request.query.allergen_id}`};
+//                 }else{
+//                     respuesta={error:true, code:200, type:-2, message: `No hay alergenos en la base de datos`};
+//                 }
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+
+
+
+
+// app.get('/alergeno/ingredientes',(request,response)=>{
+//     let respuesta;
+//     let params;
+//     let sql;
+//     if(request.query.allergen_id!=null){
+//         params=[request.query.allergen_id]
+//         sql=`SELECT allergens.allergen_name, ingredients.ingredient_name FROM allergens 
+//             JOIN allergen_ingredient ON allergen_ingredient.allergen_id=allergen.allergen_id
+//             JOIN ingredients ON ingredient.ingredient_id=allergen_ingredient-ingredient_id
+//             WHERE allergens.allergen_id=?`
+//     }else{
+//         sql=`SELECT * FROM allergens`
+//     }
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             respuesta={error:true, type:0, message: err};
+//         }
+//         else{
+//             if(res.length>0){
+//                 respuesta={error:true, code:200, type:1, message: res};
+//             }else{
+//                 if(request.query.allergen_id!=null){
+//                     respuesta={error:true, code:200, type:-1, message: `No existe alergeno con id ${request.query.allergen_id}`};
+//                 }else{
+//                     respuesta={error:true, code:200, type:-2, message: `No hay alergenos en la base de datos`};
+//                 }
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+
+
+// app.post('/alergeno',(request,response)=>{
+//     let respuesta;
+//     let params=[request.body.allergen_name];
+//     let sql=`INSERT INTO allergens (allergen_name) VALUES (?)`;
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             if (err.errno==1048){
+//                 respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
+//             }else  if (err.errno==1366){
+//                 respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+//             }else{
+//                 respuesta={error:true, type:0, message: err};
+//             }
+//         }
+//         else{
+//             if(res.affectedRows>0){
+//                 respuesta={error:false, type:1, message: `alergeno añadido correctamente con id ${res.insertId}`};
+//             }
+//             else{
+//                 respuesta={error:true, type:2, message: `El alergeno no se ha podido añadir a la base de datos`};
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+
+// app.post('/alergeno/ingredientes',(request,response)=>{
+//     let respuesta;
+//     let params=[request.body.allergen_id, request.body.ingredient_id];
+//     let sql=`INSERT INTO allergen_ingredient (allergen_id,ingredient_id) VALUES (?,?)`;
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             if (err.errno==1048){
+//                 respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
+//             }else  if (err.errno==1366){
+//                 respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+//             }else{
+//                 respuesta={error:true, type:0, message: err};
+//             }
+//         }
+//         else{
+//             if(res.affectedRows>0){
+   
+//                 respuesta={error:false, type:1, message: `ingrediente añadido correctamente con id ${res.insertId}`};
+//             }
+//             else{
+//                 respuesta={error:true, type:2, message: `El ingrediente no se ha podido añadir a la base de datos`};
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+ 
+
+
+
+
+
+
+// app.put('/alergeno',(request,response)=>{
+//     let respuesta;
+//     if(request.body.allergen_id!=null){
+//         let name=request.body.name;
+//         if(request.body.name.length==0){ name=null }
+//         let params=[name,request.body.allergen_id]
+
+//         let sql=`UPDATE allergens SET name=COALESCE(?,name)  WHERE allergen_id=?`
+//         connection.query(sql,params,(err,res)=>{
+//             if (err){
+//                 if (err.errno==1452){
+//                     respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
+//                 }else  if (err.errno==1366){
+//                     respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+//                 }else{
+//                     respuesta={error:true, type:0, message: err};
+//                 }
+//             }
+//             else{
+//                 if(res.affectedRows>0){
+//                     if(res.changedRows>0){
+//                         respuesta={error:false, type:1, message: `alergeno con id ${request.body.allergen_id} modificado correctamente`};
+//                     }
+//                     else{
+//                         respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
+//                     }
+//                 }
+//                 else{
+//                     respuesta={error:true, type:-3, message: `alergeno con id ${request.body.allergen_id} no encontrado`};
+//                 }
+//             }
+//             response.send(respuesta)
+//         })
+//     }else{
+//         respuesta={error:true, type:-4, message: `id del alergeno no especificado`};
+//         response.send(respuesta);
+//     }
+// })
+
+
+
+
+// app.delete('/alergeno',(request,response)=>{
+//     let respuesta;
+//     if(request.body.allergen_id!=null){
+//         let params=[request.body.allergen_id];
+//         let sql=`DELETE FROM allergens WHERE allergen_id=?`;
+//         connection.query(sql,params,(err,res)=>{
+//             if (err){   
+//                 respuesta={error:true, type:0, message:err};
+//             }
+//             else{
+//                 if(res.affectedRows>0){
+//                     respuesta={error:false, type:1, message: `allergen con id ${request.body.allergen_id} eliminado correctamente`};
+//                 }
+//                 else{
+//                     respuesta={error:true, type:-1, message: `allergen con id ${request.body.allergen_id} no encontrado`};
+//                 }
+//             }
+//             response.send(respuesta);
+//         })
+//     }else{
+//         respuesta={error:true, type:-2, message: `id de allergen no especificado`};
+//         response.send(respuesta);
+//     }
+// })
+
+
+
+
+
+
+// //  favoritos  //
+
+// app.get('/favorito',(request,response)=>{
+//     let respuesta;
+//     let params;
+//     let sql;
+//     if(request.query.favourite_id!=null){
+//         params=[request.query.favourite_id]
+//         sql=`SELECT * FROM favourites 
+//             WHERE favourite_id=?`
+//     }else{
+//         sql=`SELECT * FROM favourites`
+//     }
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             respuesta={error:true, type:0, message: err};
+//         }
+//         else{
+//             if(res.length>0){
+//                 respuesta={error:true, code:200, type:1, message: res};
+//             }else{
+//                 if(request.query.favourite_id!=null){
+//                     respuesta={error:true, code:200, type:-1, message: `No existe favorito con id ${request.query.favourite_id}`};
+//                 }else{
+//                     respuesta={error:true, code:200, type:-2, message: `No hay favoritos en la base de datos`};
+//                 }
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+
+
+
+// app.post('/favoritos',(request,response)=>{
+//     let respuesta;
+//     let params=[request.body.name,request.body.password,request.body.email];
+//     let sql=`INSERT INTO favourites (name, password, email) VALUES (?,??)`;
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             if (err.errno==1048){
+//                 respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
+//             }else  if (err.errno==1366){
+//                 respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+//             }else{
+//                 respuesta={error:true, type:0, message: err};
+//             }
+//         }
+//         else{
+//             if(res.affectedRows>0){
+//                 respuesta={error:false, type:1, message: `Disco añadido correctamente con id ${res.insertId}`};
+//             }
+//             else{
+//                 respuesta={error:true, type:2, message: `El disco no se ha podido añadir a la base de datos`};
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
+
+
+
+
+// app.put('/favorito',(request,response)=>{
+//     let respuesta;
+//     if(request.body.favourite_id!=null){
+//         let name=request.body.name;
+//         let password=request.body.password;
+//         let email=request.body.email;
+//         if(request.body.name.length==0){ name=null }
+//         if(request.body.password.length==0){ password=null }
+//         if(request.body.email.length==0){ email=null }
+//         let params=[name,password,email,request.body.favourite_id]
+
+//         let sql=`UPDATE favourites SET name=COALESCE(?,name), password=COALESCE(?,password), email=COALESCE(?,email) WHERE favourite_id=?`
+//         connection.query(sql,params,(err,res)=>{
+//             if (err){
+//                 if (err.errno==1452){
+//                     respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
+//                 }else  if (err.errno==1366){
+//                     respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+//                 }else{
+//                     respuesta={error:true, type:0, message: err};
+//                 }
+//             }
+//             else{
+//                 if(res.affectedRows>0){
+//                     if(res.changedRows>0){
+//                         respuesta={error:false, type:1, message: `favorito con id ${request.body.favourite_id} modificado correctamente`};
+//                     }
+//                     else{
+//                         respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
+//                     }
+//                 }
+//                 else{
+//                     respuesta={error:true, type:-3, message: `favorito con id ${request.body.favourite_id} no encontrado`};
+//                 }
+//             }
+//             response.send(respuesta)
+//         })
+//     }else{
+//         respuesta={error:true, type:-4, message: `id del favorito no especificado`};
+//         response.send(respuesta);
+//     }
+// })
+
+
+
+
+// app.delete('/favorito',(request,response)=>{
+//     let respuesta;
+//     if(request.body.favourite_id!=null){
+//         let params=[request.body.favourite_id];
+//         let sql=`DELETE FROM favourites WHERE favourite_id=?`;
+//         connection.query(sql,params,(err,res)=>{
+//             if (err){   
+//                 respuesta={error:true, type:0, message:err};
+//             }
+//             else{
+//                 if(res.affectedRows>0){
+//                     respuesta={error:false, type:1, message: `favourite con id ${request.body.favourite_id} eliminado correctamente`};
+//                 }
+//                 else{
+//                     respuesta={error:true, type:-1, message: `favourite con id ${request.body.favourite_id} no encontrado`};
+//                 }
+//             }
+//             response.send(respuesta);
+//         })
+//     }else{
+//         respuesta={error:true, type:-2, message: `id de favourite no especificado`};
+//         response.send(respuesta);
+//     }
+// })
+
+
 
 
 
