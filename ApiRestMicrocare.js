@@ -42,8 +42,8 @@ var creepy = function (clear) {
 // Save BOTH the password and salt into database or file
 var clearpass = "He110Wor!d";
 var creeped = creepy(clearpass);
-console.log("===== HASHED PASSWORD + SALT =====");
-console.log(creeped);
+// console.log("===== HASHED PASSWORD + SALT =====");
+// console.log(creeped);
 
 // (D) VALIDATE PASSWORD
 var validate = function (userpass, hashedpass, salt) {
@@ -56,15 +56,14 @@ var validate = function (userpass, hashedpass, salt) {
 // (E) TEST VALIDATE
 // clearpass = "FOOBAR";
 var validated = validate(clearpass, creeped.hash, creeped.salt);
-console.log("===== VALIDATION =====");
-console.log("Clear password: " + clearpass);
-console.log("Validation status: " + validated);
+// console.log("===== VALIDATION =====");
+// console.log("Clear password: " + clearpass);
+// console.log("Validation status: " + validated);
 
 
 
 ///// RECETAS
 app.get('/recetas',(request,response)=>{
-    console.log('holi')
     let respuesta;
     let params;
     let sql;
@@ -87,9 +86,12 @@ app.get('/recetas',(request,response)=>{
                 }else{
                     respuesta={error:true, code:200, type:-2, message: `No hay recetas en la base de datos`};
                 }
-            }
+               
+            } response.send(respuesta)
+            console.log(respuesta)
         }
-        response.send(respuesta)
+         
+       
     })
 })
 
@@ -459,7 +461,6 @@ app.delete('/grupos',(request,response)=>{
 /// MICRONUTRIENTES
 
 app.get('/micronutrientes',(request,response)=>{
-    console.log('micronutrientes')
     let respuesta;
     let params;
     let sql;
@@ -485,6 +486,7 @@ app.get('/micronutrientes',(request,response)=>{
             }
         }
         response.send(respuesta)
+        console.log(respuesta)
     })
 })
 
@@ -1246,7 +1248,7 @@ app.post('/usuario',(request,response)=>{
 app.post('/usuario/registro',(request,response)=>{
     let respuesta;
     let paramsGet= [request.body.username]
-    let paramsPost=[request.body.username,request.body.password,request.body.email];
+    let paramsPost=[request.body.username,creepy(request.body.password).hash,request.body.email];
     let sqlPost=`INSERT INTO users (username, password, email) VALUES (?,?,?)`;
     let sqlGet=`SELECT * FROM users WHERE username=?`
     
@@ -1279,11 +1281,12 @@ app.post('/usuario/registro',(request,response)=>{
                         else{
                             respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
                         }
-                    }
+                    }response.send(respuesta)
+                    console.log(respuesta)
                 }) 
             }
         } 
-        response.send(respuesta)
+        
     })
 
         
@@ -1297,7 +1300,7 @@ app.post('/usuario/registro',(request,response)=>{
 
 app.post('/usuario/login',(request,response)=>{
     let respuesta;
-    let params= [request.body.username, creepy(request.body.password)]
+    let params= [request.body.username, creepy(request.body.password).hash]
     let sql=`SELECT user_id, profile_picture FROM users WHERE username=? && password=? `
     
     connection.query(sql,params,(err,res)=>{
