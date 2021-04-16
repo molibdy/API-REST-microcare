@@ -322,7 +322,6 @@ app.delete('/micronutrientes',(request,response)=>{
 
 
 app.get('/ingredientes',(request,response)=>{
-    console.log('holii')
     let respuesta;
     let params;
     let sql;
@@ -488,10 +487,8 @@ app.post('/ingestas',(request,response)=>{
     let sql=`INSERT INTO intakes (user_id, date) VALUES (?,?)`;
     let params2;
     let sql2;
-    console.log('fuera query');
-    console.log(params);
     connection.query(sql,params,(err,res)=>{
-        console.log('dentro query');
+        
 
         if (err){
             respuesta = err;
@@ -500,18 +497,17 @@ app.post('/ingestas',(request,response)=>{
             if(res.affectedRows>0){
                 respuesta={error:false, type:1, message: `Intake añadido correctamente con id ${res.insertId}`}
 
-                console.log(request.body.ingredientes.length);
                 for(let i=0; i<request.body.ingredientes.length; i++){
-                    console.log('dentro del for');
+        
                     params2 = [res.insertId, request.body.ingredientes[i].ingrediente, request.body.ingredientes[i].peso]
                     sql2 = 'INSERT INTO intake_ingredient (intake_id, ingredient_id, grams ) VALUES (?,?,?)'
                         connection.query(sql2,params2,(error,positivo)=>{
                             if(err){
-                                console.log(error);
+                        
                             }
                             else{
                                 respuesta = {error:false, type:1, message: positivo.insertId}
-                                console.log(positivo);
+                              
 
                             }
                             
@@ -887,11 +883,9 @@ app.post('/progreso/grupos',(request,response)=>{
         GROUP BY name`
         connection.query(sql,params,(err,res)=>{
             if (err){
-                console.log('err de /progreso/grupos')
                 respuesta={error:true, type:0, message: err};
             }
             else{
-                console.log('res de /progreso/grupos')
                 if(res.length>0){
                     respuesta={error:false, code:200, type:1, message: res};
                 }else{
@@ -899,13 +893,10 @@ app.post('/progreso/grupos',(request,response)=>{
                 }
             }
             response.send(respuesta)
-            console.log('progreso/grupos')
-            console.log(respuesta)
         })
     }else{
         respuesta={error:true, code:200, type:-3, message: `Missing date or user_id`};
         response.send(respuesta)
-        console.log(respuesta)
     }
     
 })
