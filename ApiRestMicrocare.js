@@ -84,7 +84,7 @@ app.get('/recetas',(request,response)=>{
                 if(request.query.recipe_id!=null){
                     respuesta={error:true, code:200, type:-1, message: `No existe receta con id ${request.query.recipe_id}`};
                 }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay recetas en la base de datos`};
+                    respuesta={error:true, code:200, type:-2, message: res};
                 }
                
             } response.send(respuesta)
@@ -215,7 +215,7 @@ app.get('/micronutrientes',(request,response)=>{
                 if(request.query.group_id!=null){
                     respuesta={error:true, code:200, type:-1, message: `No existe micronutriente con id ${request.query.micronutrient_id}`};
                 }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay micronutrientes en la base de datos`};
+                    respuesta={error:true, code:200, type:-2, message:res};
                 }
             }
         }
@@ -773,6 +773,7 @@ app.post('/usuario/login',(request,response)=>{
                 respuesta={error:true, code:200, type:-1, message: `No existe usuario con id ${request.body.username}`};
             }
         }
+        console.log(err)
         response.send(respuesta)
     })
 })
