@@ -192,6 +192,35 @@ app.delete('/recetas',(request,response)=>{
 
 
 
+app.get('/recetas/planeadas',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.user_id>0){
+        params=[request.query.user_id]
+        sql=`SELECT plan_rec_id, date, recipe_id, isConsumed FROM planned_recipes WHERE user_id=?`
+    }else{
+        sql=`SELECT * FROM planned_recipes`
+    }
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                respuesta={error:true, code:200, type:-1, message: res};
+            } response.send(respuesta)
+        }
+         
+       
+    })
+})
+
+
+
+
 /// MICRONUTRIENTES
 
 app.get('/micronutrientes',(request,response)=>{
@@ -317,6 +346,100 @@ app.delete('/micronutrientes',(request,response)=>{
         response.send(respuesta);
     }
 })
+
+
+
+//  OBTENER MICROSCORES DE RECETAS, INTAKES Y RETOS:
+
+app.get('/micronutrientes/receta',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    params=[request.query.recipe_id]
+    sql=`SELECT ingredient_micronutrient.micronutrient_id as micronutrient_id, 
+    SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
+    FROM ingredient_micronutrient
+    JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+    WHERE recipe_ingredient.recipe_id=?
+    ORDER BY percent DESC`
+   
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:false, code:200, type:1, message: res};
+            }else{
+                respuesta={error:false, code:200, type:-1, message: res};
+                
+            }
+        }
+        response.send(respuesta)
+    })
+})
+
+
+app.get('/micronutrientes/ingesta',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    params=[request.query.intake_id]
+    sql=`SELECT ingredient_micronutrient.micronutrient_id as micronutrient_id, 
+    SUM(ingredient_micronutrient.micronutrient_percent*intake_ingredient.grams/ingredient_micronutrient.grams) AS percent
+    FROM ingredient_micronutrient
+    JOIN intake_ingredient ON intake_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+    WHERE intake_ingredient.intake_id=?
+    ORDER BY percent DESC`
+   
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:false, code:200, type:1, message: res};
+            }else{
+                respuesta={error:false, code:200, type:-1, message: res};
+                
+            }
+        }
+        response.send(respuesta)
+    })
+})
+
+
+
+app.get('/micronutrientes/reto',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    params=[request.query.challenge_id]
+    sql=`SELECT ingredient_micronutrient.micronutrient_id as micronutrient_id, 
+    SUM(ingredient_micronutrient.micronutrient_percent*challenge_ingredient.grams/ingredient_micronutrient.grams) AS percent
+    FROM ingredient_micronutrient
+    JOIN challenge_ingredient ON challenge_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+    WHERE challenge_ingredient.challenge_id=?
+    ORDER BY percent DESC`
+   
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:false, code:200, type:1, message: res};
+            }else{
+                respuesta={error:false, code:200, type:-1, message: res};
+                
+            }
+        }
+        response.send(respuesta)
+    })
+})
+
+
+
 
 //////////////////////////TABLA INGREDIENTES
 
@@ -822,6 +945,7 @@ app.post('/usuario/login',(request,response)=>{
     
     connection.query(sql,params,(err,res)=>{
         if (err){
+            console.log(err)
             respuesta={error:true, type:0, message: err};
         }
         else{
@@ -1056,6 +1180,49 @@ app.post('/progreso/start',(request,response)=>{
 
 
 
+app.put('/progreso',(request,response)=>{
+            let respuesta;
+            if(request.body.user_id>0){
+                
+                let params=[]
+                let sql=`UPDATE progress SET percent = (CASE `
+                for(let i=0;i<request.body.percents.length;i++){
+                    params.push(request.body.percents[i].micronutrient_id,request.body.percents[i].percent)
+                    sql += `micronutrient_id = ? THEN percent + ? `
+                }
+                params.push(request.body.user_id, request.body.date)
+                sql += `END) WHERE user_id=? AND date=?`
+                connection.query(sql,params,(err,res)=>{
+                    if (err){
+                        if (err.errno==1452){
+                            respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
+                        }else  if (err.errno==1366){
+                            respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
+                        }else{
+                            respuesta={error:true, type:0, message: err};
+                        }
+                    }
+                    else{
+                        if(res.affectedRows>0){
+                            if(res.changedRows>0){
+                                respuesta={error:false, type:1, message: `progresos modificados correctamente`};
+                            }
+                            else{
+                                respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
+                            }
+                        }
+                        else{
+                            respuesta={error:true, type:-3, message: `El usuario con id ${request.body.user_id} no tiene progresos el día ${request.body.date}`};
+                        }
+                    }
+                    response.send(respuesta)
+                })
+            }else{
+                respuesta={error:true, type:-4, message: `user_id no especificado`};
+                response.send(respuesta);
+            }
+        })
+        
 
 
 // /// DIETAS
