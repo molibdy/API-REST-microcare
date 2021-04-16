@@ -498,7 +498,7 @@ app.post('/ingestas',(request,response)=>{
         }
         else{
             if(res.affectedRows>0){
-                respuesta={error:false, type:1, message: `Intake añadido correctamente con id ${res.insertId}`}
+                respuesta={error:false, type:1, message: res.insertId}
 
                 console.log(request.body.ingredientes.length);
                 for(let i=0; i<request.body.ingredientes.length; i++){
