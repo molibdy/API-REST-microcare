@@ -631,6 +631,64 @@ app.delete('/ingestas',(request,response)=>{
 
 })
 
+app.get('/ingestas/favoritos',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.favourite_id!=null){
+        params=[request.query.favourite_id]
+        sql=`SELECT * FROM favourites 
+            WHERE favourite_id=?`
+    }else{
+        sql=`SELECT * FROM favourites`
+    }
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                if(request.query.favourite_id!=null){
+                    respuesta={error:true, code:200, type:-1, message: `No existe favorito con id ${request.query.favourite_id}`};
+                }else{
+                    respuesta={error:true, code:200, type:-2, message: `No hay favoritos en la base de datos`};
+                }
+            }
+        }
+        response.send(respuesta)
+    })
+})
+
+app.delete('/ingestas/favorito',(request,response)=>{
+    let respuesta;
+    if(request.body.favourite_id!=null){
+        let params=[request.body.favourite_id];
+        let sql=`DELETE FROM favourites WHERE favourite_id=?`;
+        console.log(params);
+        connection.query(sql,params,(err,res)=>{
+        
+            if (err){   
+                respuesta={error:true, type:0, message:err};
+            }
+            else{
+                if(res.affectedRows>0){
+                    respuesta={error:false, type:1, message: `favourite con id ${request.body.favourite_id} eliminado correctamente`};
+                }
+                else{
+                    respuesta={error:true, type:-1, message: `favourite con id ${request.body.favourite_id} no encontrado`};
+                }
+            }
+            response.send(respuesta);
+        })
+    }else{
+        respuesta={error:true, type:-2, message: `id de favourite no especificado`};
+        response.send(respuesta);
+    }
+})
+
+
 
 
 
@@ -1606,35 +1664,6 @@ app.post('/progreso/start',(request,response)=>{
 
 // //  favoritos  //
 
-// app.get('/favorito',(request,response)=>{
-//     let respuesta;
-//     let params;
-//     let sql;
-//     if(request.query.favourite_id!=null){
-//         params=[request.query.favourite_id]
-//         sql=`SELECT * FROM favourites 
-//             WHERE favourite_id=?`
-//     }else{
-//         sql=`SELECT * FROM favourites`
-//     }
-//     connection.query(sql,params,(err,res)=>{
-//         if (err){
-//             respuesta={error:true, type:0, message: err};
-//         }
-//         else{
-//             if(res.length>0){
-//                 respuesta={error:true, code:200, type:1, message: res};
-//             }else{
-//                 if(request.query.favourite_id!=null){
-//                     respuesta={error:true, code:200, type:-1, message: `No existe favorito con id ${request.query.favourite_id}`};
-//                 }else{
-//                     respuesta={error:true, code:200, type:-2, message: `No hay favoritos en la base de datos`};
-//                 }
-//             }
-//         }
-//         response.send(respuesta)
-//     })
-// })
 
 
 
