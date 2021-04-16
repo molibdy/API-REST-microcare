@@ -895,7 +895,7 @@ app.post('/progreso/grupos',(request,response)=>{
                 if(res.length>0){
                     respuesta={error:false, code:200, type:1, message: res};
                 }else{
-                    respuesta={error:true, code:200, type:-2, message: `User ${request.body.user_id} has no progress on date ${request.body.date}`};
+                    respuesta={error:true, code:200, type:-1, message: `User ${request.body.user_id} has no progress on date ${request.body.date}`};
                 }
             }
             response.send(respuesta)
@@ -918,22 +918,28 @@ app.get('/progreso',(request,response)=>{
     let respuesta;
     let params;
     let sql;
+    console.log(request.query.date)
     if(request.query.user_id!=null && request.query.date!=null){
+        console.log('progreso con id y fecha')
         params=[request.query.user_id, request.query.date]
+        
         sql=`SELECT micronutrient_id, percent FROM progress 
         WHERE progress.user_id=? AND progress.date=?`
     }else if(request.query.user_id!=null){  // Selecciona la media del usuario de cada día
+        console.log('progreso con id sin fecha')
         params=[request.query.user_id]
         sql=`SELECT date, AVG(percent) AS percent FROM progress 
         WHERE progress.user_id=? 
         GROUP BY progress.date
         ORDER BY progress.date`
-    }else{                       // Selecciona la media de todos los users de cada día
+    }else{          
+        console.log('progreso sin parametros')             // Selecciona la media de todos los users de cada día
         params=[]
         sql=`SELECT date, AVG(percent) AS percent FROM progress 
         GROUP BY progress.date
         ORDER BY progress.date`
     }
+    console.log(request.query.date)
         connection.query(sql,params,(err,res)=>{
             if (err){
                 console.log('error en /progreso')
@@ -946,7 +952,7 @@ app.get('/progreso',(request,response)=>{
                 if(res.length>0){
                     respuesta={error:false, code:200, type:1, message: res};
                 }else{
-                    respuesta={error:false, code:200, type:-1, message: `User ${request.query.user_id} has no progress on date ${request.query.date}`};
+                    respuesta={error:false, code:200, type:-1, message: res};
                 }
             }
             response.send(respuesta)
