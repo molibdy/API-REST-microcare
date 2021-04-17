@@ -650,11 +650,9 @@ app.get('/ingestas/favoritos',(request,response)=>{
             if(res.length>0){
                 respuesta={error:true, code:200, type:1, message: res};
             }else{
-                if(request.query.favourite_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe favorito con id ${request.query.favourite_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay favoritos en la base de datos`};
-                }
+                respuesta={error:true, code:200, type:-1, message: res};
+
+                
             }
         }
         response.send(respuesta)
@@ -663,9 +661,9 @@ app.get('/ingestas/favoritos',(request,response)=>{
 
 app.delete('/ingestas/favorito',(request,response)=>{
     let respuesta;
-    if(request.body.favourite_id!=null){
-        let params=[request.body.favourite_id];
-        let sql=`DELETE FROM favourites WHERE favourite_id=?`;
+    if(request.query.favourite_id!=null){
+        let params=[request.query.favourite_id];
+        let sql=`DELETE FROM favourites WHERE favourite_id = ?`;
         console.log(params);
         connection.query(sql,params,(err,res)=>{
         
@@ -674,10 +672,10 @@ app.delete('/ingestas/favorito',(request,response)=>{
             }
             else{
                 if(res.affectedRows>0){
-                    respuesta={error:false, type:1, message: `favourite con id ${request.body.favourite_id} eliminado correctamente`};
+                    respuesta={error:false, type:1, message: `favourite con id ${request.query.favourite_id} eliminado correctamente`};
                 }
                 else{
-                    respuesta={error:true, type:-1, message: `favourite con id ${request.body.favourite_id} no encontrado`};
+                    respuesta={error:true, type:-1, message: `favourite con id ${request.query.favourite_id} no encontrado`};
                 }
             }
             response.send(respuesta);
@@ -808,6 +806,94 @@ app.post('/usuario/registro',(request,response)=>{
             }
         } 
         
+    })
+
+        
+    
+
+})
+
+app.post('/usuario/preferencias',(request,response)=>{
+    console.log('entrada al post');
+    let respuesta;
+    let paramsGet= []
+    let paramsPost=[request.body.username,request.body.password,request.body.email];
+    let sqlPrueba = `SELECT * from micronutrients `
+    let sqlPost=`INSERT INTO users (username, password, email) VALUES (?,?,?)`;
+    let sqlGet=`SELECT  diet_ingredient.ingredient_id, allergen_ingredient.ingredient_id FROM diet_ingredient
+    JOIN ingredients ON ingredients.ingredient_id = diet_ingredient.ingredient_id
+    JOIN allergen_ingredient ON allergen_ingredient.ingredient_id=ingredients.ingredient_id
+    WHERE diet_id IN (`
+    for(let i =0; i<request.body.dietas.length; i++){
+        if(i==request.body.dietas.length-1){
+            paramsGet.push(request.body.dietas[i])
+            sqlGet += `?`
+        }else{
+            paramsGet.push(request.body.dietas[i])
+            sqlGet += `?,`
+        }
+        
+    } sqlGet += `) OR allergen_id IN (`
+    for(let i =0; i<request.body.alergenos.length; i++){
+        if(i==request.body.alergenos.length-1){
+            paramsGet.push(request.body.alergenos[i])
+            sqlGet += `?`
+        }else{
+            paramsGet.push(request.body.alergenos[i])
+            sqlGet += `?,`
+        }
+    }            sqlGet += `)`
+
+
+    connection.query(sqlGet,paramsGet,(err,res)=>{
+        console.log('entrada al post');
+
+        if(err){
+            console.log(err);
+            respuesta={error:true, type:0, message: err};
+        }
+        else{ 
+            if(res.length>0){
+                respuesta={error:false, code:200, type:3, message: res};     
+            }
+            else{
+                respuesta={error:false, code:200, type:2, message: res};
+                console.log(res);
+                let sql2 = `INSERT INTO avoid_ingredients (user_id, ingredient_id) VALUES`
+                params2=[]
+                    for(let i=0;i<request.body.ingredientes.length;i++){
+                        params2.push(request.body.user_id,request.body.ingredientes[i])
+                        sql=+ `(?,?),`
+                    }
+                    for(let i=0;i<res.length;i++){
+                        params2.push(request.body.user_id,res[i])
+                        if(i==res.length-1){
+                            sql=+ `(?,?)`
+                        }else{
+                            sql=+ `(?,?),`
+                        }  
+                    }
+
+            connection.query(sql2,params2,(negativo,positivo)=>{
+                    if (negativo){
+                    
+                        console.log(negativo)
+                    }
+                    else{
+                        console.log(positivo)
+                        if(positivo.affectedRows>0){
+                            respuesta={error:false, type:1, message: `Usuario añadido correctamente con id ${positivo.insertId}`};
+                        }
+                        else{
+                            respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
+                        }
+                    }
+                    console.log(respuesta)
+                    response.send(respuesta)
+
+                })  
+            }
+        } 
     })
 
         
