@@ -2,13 +2,12 @@
 let port= process.env.PORT || 300;
 let express=require ('express');
 let app= new express()
-app.use(express.urlencoded({extended:false}));
-app.use(express.json())
+app.use(express.urlencoded({extended:false,limit: '50mb'}));
+app.use(express.json({limit: '50mb'}))
 let mysql=require ('mysql');
 let cors=require('cors');
 app.use(cors())
 app.listen(port)
-
 let connection=mysql.createConnection({
     host: "microcare.c7akwgf5vfhs.eu-west-1.rds.amazonaws.com",
     database: "microcareDB",
@@ -93,6 +92,74 @@ app.get('/recetas',(request,response)=>{
        
     })
 })
+
+
+
+app.get('/recetas/detalles',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    console.log('entrando en recetas/detalles')
+    if(request.query.recipe_id!=null){
+        params=[request.query.recipe_id]
+        sql=`SELECT recipe_ingredient.recipe_id, diets.diet_name, ingredients.ingredient_name, recipe_ingredient.total_grams, 
+        recipe_ingredient.amount, recipe_ingredient.unit FROM recipe_ingredient 
+        JOIN ingredients ON ingredients.ingredient_id=recipe_ingredient.ingredient_id
+        JOIN diet_recipe ON diet_recipe.recipe_id=recipe_ingredient.recipe_id
+        JOIN diets ON diet_recipe.diet_id=diets.diet_id
+        WHERE recipe.ingredient.recipe_id=?`
+    }else{
+        sql=`SELECT recipe_ingredient.recipe_id, diets.diet_name, ingredients.ingredient_name, recipe_ingredient.total_grams, 
+        recipe_ingredient.amount, recipe_ingredient.unit FROM recipe_ingredient 
+        JOIN ingredients ON ingredients.ingredient_id=recipe_ingredient.ingredient_id
+        JOIN diet_recipe ON diet_recipe.recipe_id=recipe_ingredient.recipe_id
+        JOIN diets ON diet_recipe.diet_id=diets.diet_id
+        ORDER BY recipe_id`
+    }
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                respuesta={error:true, code:200, type:-1, message: res};
+               
+            } 
+        }
+        response.send(respuesta)
+    })
+})
+
+
+app.get('/recetas/parati',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    console.log('entrando en recetas/parati') 
+        params=[request.query.user_id]
+        sql=`SELECT recipes.recipe_id FROM recipes
+        JOIN recipe_ingredient ON recipe_ingredient.recipe_id=recipes.recipe_id
+        JOIN avoid_ingredients ON avoid_ingredients.ingredient_id=recipe_ingredient.ingredient_id
+        WHERE avoid_ingredients.user_id=?`
+
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                respuesta={error:true, code:200, type:-1, message: res};
+               
+            } 
+        }
+        response.send(respuesta)
+    })
+})
+
 
 app.post('/recetas', (request,response) =>{
 
@@ -355,13 +422,35 @@ app.get('/micronutrientes/receta',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    params=[request.query.recipe_id]
-    sql=`SELECT ingredient_micronutrient.micronutrient_id as micronutrient_id, 
-    SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
-    FROM ingredient_micronutrient
-    JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
-    WHERE recipe_ingredient.recipe_id=?
-    ORDER BY percent DESC`
+    if(request.query.recipe_id!=null){
+        params=[request.query.recipe_id]
+        sql=`SELECT ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
+        micronutrients.micronutrient_name AS micronutrient_name,
+        micronutrients.acronym AS acronym,
+        micronutrient_groups.color AS color,
+        SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
+        FROM ingredient_micronutrient
+        JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+        JOIN micronutrients ON micronutrients.micronutrient_id=ingredient_micronutrient.micronutrient_id
+        JOIN micronutrient_groups ON micronutrient_groups.group_id=micronutrients.group_id
+        WHERE recipe_ingredient.recipe_id=?
+        GROUP BY micronutrient_id
+        ORDER BY percent DESC`
+    }else{
+        sql=`SELECT recipe_ingredient.recipe_id AS recipe_id, ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
+        micronutrients.micronutrient_name AS micronutrient_name,
+        micronutrients.acronym AS acronym,
+        micronutrient_groups.color AS color,
+        SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
+        FROM ingredient_micronutrient
+        JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+        JOIN micronutrients ON micronutrients.micronutrient_id=ingredient_micronutrient.micronutrient_id
+        JOIN micronutrient_groups ON micronutrient_groups.group_id=micronutrients.group_id
+        GROUP BY recipe_id, micronutrient_id
+        ORDER BY recipe_id, percent DESC`
+    }
+
+    
    
     connection.query(sql,params,(err,res)=>{
         if (err){
@@ -499,6 +588,67 @@ app.post('/ingredientes',(request,response)=>{
         }
         response.send(respuesta)
     })
+})
+
+
+
+app.post('/ingredientes/micronutrientes',(request,response)=>{
+    let respuesta;
+    let params=[];
+    let sql=`SELECT micronutrient_id, usda_id, cdr_amount, cdr_unit FROM micronutrients`;
+    connection.query(sql,(err,micros)=>{
+        if(err) console.log(err)
+        else{
+            // console.log(micros)
+            for(i=0;i<micros.length;i++){
+                for(j=0;j<request.body.micronutrients.length;j++){
+                    // matchear los micronutrientes de nuestra tabla con los obtenidos de usda
+                    if(micros[i].usda_id==request.body.micronutrients[j].nutrient.number){
+                        //modificar el id de los nutrientes de usda con nuestro micronutrient_id
+                    request.body.micronutrients[j].nutrient.id=micros[i].micronutrient_id
+                        // comprobar que la unidad de usda es la misma que la usada en la cdr
+                        if(request.body.micronutrients[j].nutrient.unitName==micros[i].cdr_unit){
+                            // calcular el % de la cdr para el micronutriente j
+                            request.body.micronutrients[j].nutrient.rank=100*request.body.micronutrients[j].amount/micros[i].cdr_amount
+                            if(request.body.micronutrients[j].nutrient.rank>100){
+                                // cota superior=100%
+                                request.body.micronutrients[j].nutrient.rank=100
+                            }
+                        }else{
+                            request.body.micronutrients[j].nutrient.rank=0
+                        }
+                    }
+                }
+            }
+
+            let sqlPost=`INSERT INTO ingredient_micronutrient 
+            (ingredient_id,grams,micronutrient_id,micronutrient_amount,micronutrient_unit,micronutrient_percent) VALUES `
+            
+            for(j=0;j<request.body.micronutrients.length;j++){
+                params.push(request.body.ingredient_id,request.body.grams,request.body.micronutrients[j].nutrient.id,
+                    request.body.micronutrients[j].amount,request.body.micronutrients[j].nutrient.unitName,request.body.micronutrients[j].nutrient.rank)
+                if(j==request.body.micronutrients.length-1){
+                    sqlPost+=` (?,?,?,?,?,?)` 
+                }else{
+                    sqlPost+=`(?,?,?,?,?,?),`
+                }
+            }
+            // console.log(params)
+            connection.query(sqlPost,params,(err,res)=>{
+                if (err){
+                    respuesta={error:true, type:0, message: err};
+                }
+                else{
+                    respuesta={error:false, type:1, message: res};
+                }
+                response.send(respuesta)
+            })
+        }
+    })
+
+
+
+    
 })
 
 
@@ -1178,7 +1328,6 @@ app.get('/progreso',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    console.log(request.query.date)
     if(request.query.user_id!=null && request.query.date!=null){
         console.log('progreso con id y fecha')
         params=[request.query.user_id, request.query.date]
@@ -1186,14 +1335,14 @@ app.get('/progreso',(request,response)=>{
         sql=`SELECT micronutrient_id, percent FROM progress 
         WHERE progress.user_id=? AND progress.date=?`
     }else if(request.query.user_id!=null){  // Selecciona la media del usuario de cada día
-        console.log('progreso con id sin fecha')
+        // console.log('progreso con id sin fecha')
         params=[request.query.user_id]
         sql=`SELECT date, AVG(percent) AS percent FROM progress 
         WHERE progress.user_id=? 
         GROUP BY progress.date
         ORDER BY progress.date`
     }else{          
-        console.log('progreso sin parametros')             // Selecciona la media de todos los users de cada día
+        // console.log('progreso sin parametros')             // Selecciona la media de todos los users de cada día
         params=[]
         sql=`SELECT date, AVG(percent) AS percent FROM progress 
         GROUP BY progress.date
@@ -1202,13 +1351,13 @@ app.get('/progreso',(request,response)=>{
     console.log(request.query.date)
         connection.query(sql,params,(err,res)=>{
             if (err){
-                console.log('error en /progreso')
-                console.log(err)
+                // console.log('error en /progreso')
+                // console.log(err)
                 respuesta={error:true, type:0, message: err};
             }
             else{
-                console.log('res de /progreso')
-                console.log(res)
+                // console.log('res de /progreso')
+                // console.log(res)
                 if(res.length>0){
                     respuesta={error:false, code:200, type:1, message: res};
                 }else{
@@ -1216,7 +1365,7 @@ app.get('/progreso',(request,response)=>{
                 }
             }
             response.send(respuesta)
-            console.log(respuesta)
+            // console.log(respuesta)
         })
     
 })
@@ -1228,8 +1377,8 @@ app.post('/progreso/start',(request,response)=>{
     
         let params=[];
         let sql=`INSERT INTO progress (user_id, date, micronutrient_id, percent) VALUES`;
-        for(let i=1;i<39;i++){
-            if(i==38){
+        for(let i=1;i<24;i++){
+            if(i==23){
                 params.push(request.body.user_id,request.body.date,i,request.body.percent)
                 sql += ' (?,?,?,?)'
             }else{
@@ -1239,8 +1388,8 @@ app.post('/progreso/start',(request,response)=>{
         }
         connection.query(sql,params,(err,res)=>{
             if (err){
-                console.log('err de /progreso/start')
-                console.log(err)
+                // console.log('err de /progreso/start')
+                // console.log(err)
                 if (err.errno==1048){
                     respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
                 }else  if (err.errno==1366){
@@ -1250,8 +1399,8 @@ app.post('/progreso/start',(request,response)=>{
                 }
             }
             else{
-                console.log('res de /progreso/start')
-                console.log(res)
+                // console.log('res de /progreso/start')
+                // console.log(res)
                 if(res.affectedRows>0){
                     respuesta={error:false, type:1, message: `progreso añadido correctamente con id ${res.insertId}`};
                 }
