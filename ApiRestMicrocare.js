@@ -1317,7 +1317,7 @@ app.post('/progreso/grupos',(request,response)=>{
     let sql;
     if(request.body.user_id!=null && request.body.date!=null){
         params=[request.body.user_id, request.body.date]
-        sql=`SELECT micronutrient_groups.name AS name, micronutrient_groups.color AS color, micronutrient_groups.color2 AS color2, micronutrient_groups.description AS description, AVG(progress.percent) AS percent FROM progress 
+        sql=`SELECT micronutrient_groups.group_id AS group_id, micronutrient_groups.name AS name, micronutrient_groups.color AS color, micronutrient_groups.color2 AS color2, micronutrient_groups.description AS description, AVG(progress.percent) AS percent FROM progress 
         JOIN micronutrients ON micronutrients.micronutrient_id=progress.micronutrient_id 
         JOIN micronutrient_groups ON micronutrient_groups.group_id=micronutrients.group_id 
         WHERE progress.user_id=? AND progress.date=?
