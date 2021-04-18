@@ -103,14 +103,14 @@ app.get('/recetas/detalles',(request,response)=>{
     if(request.query.recipe_id!=null){
         params=[request.query.recipe_id]
         sql=`SELECT recipe_ingredient.recipe_id, diets.diet_name, ingredients.ingredient_name, recipe_ingredient.total_grams, 
-        recipe_ingredient.amount, recipe_ingredient.unit FROM recipe_ingredient 
+        recipe_ingredient.amount, recipe_ingredient.unit, recipe_ingredient.ingredient_id FROM recipe_ingredient 
         JOIN ingredients ON ingredients.ingredient_id=recipe_ingredient.ingredient_id
         JOIN diet_recipe ON diet_recipe.recipe_id=recipe_ingredient.recipe_id
         JOIN diets ON diet_recipe.diet_id=diets.diet_id
         WHERE recipe.ingredient.recipe_id=?`
     }else{
         sql=`SELECT recipe_ingredient.recipe_id, diets.diet_name, ingredients.ingredient_name, recipe_ingredient.total_grams, 
-        recipe_ingredient.amount, recipe_ingredient.unit FROM recipe_ingredient 
+        recipe_ingredient.amount, recipe_ingredient.unit, recipe_ingredient.ingredient_id FROM recipe_ingredient 
         JOIN ingredients ON ingredients.ingredient_id=recipe_ingredient.ingredient_id
         JOIN diet_recipe ON diet_recipe.recipe_id=recipe_ingredient.recipe_id
         JOIN diets ON diet_recipe.diet_id=diets.diet_id
@@ -138,15 +138,35 @@ app.get('/recetas/parati',(request,response)=>{
     let params;
     let sql;
     console.log('entrando en recetas/parati') 
-        params=[request.query.user_id]
-        sql=`SELECT recipes.recipe_id FROM recipes
-        JOIN recipe_ingredient ON recipe_ingredient.recipe_id=recipes.recipe_id
-        JOIN avoid_ingredients ON avoid_ingredients.ingredient_id=recipe_ingredient.ingredient_id
-        WHERE avoid_ingredients.user_id=?`
+        params=[request.query.user_id, request.query.user_id, request.query.date]
+        sql=`SELECT DISTINCT recetas.recipe_id 
+        FROM (
+            SELECT recipe_ingredient.recipe_id AS recipe_id, ingredient_micronutrient.micronutrient_id as micronutrient_id,
+            SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
+            FROM ingredient_micronutrient
+            JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+            WHERE recipe_ingredient.ingredient_id NOT IN (
+                SELECT * FROM (
+                    SELECT avoid_ingredients.ingredient_id FROM avoid_ingredients
+                    WHERE avoid_ingredients.user_id=?
+                    ) AS avoid_these
+                )
+            AND micronutrient_id IN (
+                SELECT * FROM (
+                    SELECT progress.micronutrient_id FROM progress
+                    WHERE progress.user_id=? AND progress.date=?
+                    ORDER BY progress.percent ASC
+                    LIMIT 10) AS lowest_progress
+                )    
+            GROUP BY recipe_id, micronutrient_id
+            ORDER BY percent DESC
+            LIMIT 10
+            ) AS recetas`
 
     connection.query(sql,params,(err,res)=>{
         if (err){
             respuesta={error:true, type:0, message: err};
+            console.log(err)
         }
         else{
             if(res.length>0){
@@ -155,8 +175,10 @@ app.get('/recetas/parati',(request,response)=>{
                 respuesta={error:true, code:200, type:-1, message: res};
                
             } 
+            console.log(res)
         }
         response.send(respuesta)
+        
     })
 })
 
@@ -1420,15 +1442,16 @@ app.put('/progreso',(request,response)=>{
             if(request.body.user_id>0){
                 
                 let params=[]
-                let sql=`UPDATE progress SET percent = (CASE `
+                let sql=`UPDATE progress SET percent = (CASE micronutrient_id `
                 for(let i=0;i<request.body.percents.length;i++){
                     params.push(request.body.percents[i].micronutrient_id,request.body.percents[i].percent)
-                    sql += `micronutrient_id = ? THEN percent + ? `
+                    sql += `WHEN ? THEN percent + ? `
                 }
                 params.push(request.body.user_id, request.body.date)
                 sql += `END) WHERE user_id=? AND date=?`
                 connection.query(sql,params,(err,res)=>{
                     if (err){
+                        console.log(err)
                         if (err.errno==1452){
                             respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
                         }else  if (err.errno==1366){
