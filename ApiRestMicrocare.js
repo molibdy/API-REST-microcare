@@ -450,6 +450,7 @@ app.get('/micronutrientes/receta',(request,response)=>{
         micronutrients.micronutrient_name AS micronutrient_name,
         micronutrients.acronym AS acronym,
         micronutrient_groups.color AS color,
+        micronutrient_groups.group_id AS group_id,
         SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
         FROM ingredient_micronutrient
         JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
@@ -463,6 +464,7 @@ app.get('/micronutrientes/receta',(request,response)=>{
         micronutrients.micronutrient_name AS micronutrient_name,
         micronutrients.acronym AS acronym,
         micronutrient_groups.color AS color,
+        micronutrient_groups.group_id AS group_id,
         SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
         FROM ingredient_micronutrient
         JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
@@ -1354,10 +1356,17 @@ app.get('/progreso',(request,response)=>{
         console.log('progreso con id y fecha')
         params=[request.query.user_id, request.query.date]
         
-        sql=`SELECT micronutrient_id, percent FROM progress 
+        sql=`SELECT progress.micronutrient_id, progress.percent, 
+        micronutrients.micronutrient_name AS micronutrient_name,
+        micronutrients.acronym AS acronym,
+        micronutrient_groups.color AS color,
+        micronutrient_groups.group_id AS group_id
+        FROM progress
+        JOIN micronutrients ON micronutrients.micronutrient_id = progress.micronutrient_id 
+        JOIN micronutrient_groups ON micronutrients.group_id=micronutrient_groups.group_id
         WHERE progress.user_id=? AND progress.date=?`
     }else if(request.query.user_id!=null){  // Selecciona la media del usuario de cada día
-        // console.log('progreso con id sin fecha')
+        
         params=[request.query.user_id]
         sql=`SELECT date, AVG(percent) AS percent FROM progress 
         WHERE progress.user_id=? 
@@ -1370,16 +1379,15 @@ app.get('/progreso',(request,response)=>{
         GROUP BY progress.date
         ORDER BY progress.date`
     }
-    console.log(request.query.date)
         connection.query(sql,params,(err,res)=>{
             if (err){
-                // console.log('error en /progreso')
-                // console.log(err)
+                console.log('error en /progreso')
+                console.log(err)
                 respuesta={error:true, type:0, message: err};
             }
             else{
-                // console.log('res de /progreso')
-                // console.log(res)
+                console.log('res de /progreso')
+                console.log(res)
                 if(res.length>0){
                     respuesta={error:false, code:200, type:1, message: res};
                 }else{
@@ -1618,35 +1626,31 @@ app.put('/progreso',(request,response)=>{
 
 // /// GRUPOS
 
-// app.get('/grupos',(request,response)=>{
-//     console.log('grupos')
-//     let respuesta;
-//     let params;
-//     let sql;
-//     if(request.query.group_id!=null){
-//         params=[request.query.group_id]
-//         sql=`SELECT * FROM micronutrient_groups WHERE group_id=?`
-//     }else{
-//         sql=`SELECT * FROM micronutrient_groups`
-//     }
-//     connection.query(sql,params,(err,res)=>{
-//         if (err){
-//             respuesta={error:true, type:0, message: err};
-//         }
-//         else{
-//             if(res.length>0){
-//                 respuesta={error:true, code:200, type:1, message: res};
-//             }else{
-//                 if(request.query.group_id!=null){
-//                     respuesta={error:true, code:200, type:-1, message: `No existe grupo con id ${request.query.group_id}`};
-//                 }else{
-//                     respuesta={error:true, code:200, type:-2, message: `No hay grupos en la base de datos`};
-//                 }
-//             }
-//         }
-//         response.send(respuesta)
-//     })
-// })
+app.get('/micronutrientes/grupos',(request,response)=>{
+    console.log('grupos')
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.group_id!=null){
+        params=[request.query.group_id]
+        sql=`SELECT * FROM micronutrient_groups WHERE group_id=?`
+    }else{
+        sql=`SELECT * FROM micronutrient_groups`
+    }
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                respuesta={error:true, code:200, type:-11, message: res};
+            }
+        }
+        response.send(respuesta)
+    })
+})
 
 
 
