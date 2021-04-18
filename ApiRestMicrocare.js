@@ -183,6 +183,88 @@ app.get('/recetas/parati',(request,response)=>{
 })
 
 
+app.get('/recetas/planeadas',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    console.log('entrando en recetas/planeadas') 
+        params=[request.query.user_id, request.query.date]
+        sql=`SELECT planned_recipes.planned_recipe_id, planned_recipes.date, planned_recipes.recipe_id, 
+        planned_recipes.isConsumed, recipes.recipe_name 
+        FROM planned_recipes
+        JOIN recipes ON recipes.recipe_id=planned_recipes.recipe_id
+        WHERE user_id=? AND date=?`
+
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+            console.log(err)
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                respuesta={error:true, code:200, type:-1, message: res};
+               
+            } 
+            console.log(res)
+        }
+        response.send(respuesta)
+        
+    })
+})
+
+
+
+app.post('/recetas/planeadas', (request,response) =>{
+
+    let respuesta;
+
+    let params=[request.body.user_id,request.body.date,request.body.recipe_id, request.body.isConsumed];
+    let sql='INSERT INTO planned_recipes (user_id,date,recipe_id,isConsumed) VALUES (?,?,?,?)';
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+            console.log('err de post recetas planeadas')
+            console.log(err)
+        }
+        else{
+            console.log('res de post recetas planeadas')
+            console.log(res)
+            if(res.affectedRows>0){
+                respuesta={error:false, code:200, type:1, message: res.insertId};
+            }
+            else{
+                respuesta={error:true, code:200, message: `Receta no se ha podido añadir a la base de datos`};
+            }
+        }
+        response.send(respuesta)
+    })
+})
+
+
+app.put('/recetas/planeadas',(request,response)=>{
+    let respuesta;
+    let params=[request.body.isConsumed,request.body.planned_recipe_id]
+    let sql="UPDATE planned_recipes SET isConsumed=?  WHERE planned_recipe_id=?"
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.affectedRows>0){
+                respuesta={error:false, type:1, message: res};
+            }else{
+                respuesta={error:true, type:-1, message: `receta con id ${request.body.planned_recipe_id} no encontrado`};
+            }
+        }
+        response.send(respuesta)
+    })
+})
+
+
+
+
 app.post('/recetas', (request,response) =>{
 
     let respuesta;
