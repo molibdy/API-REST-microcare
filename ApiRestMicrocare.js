@@ -298,6 +298,26 @@ app.put('/recetas/planeadas',(request,response)=>{
     })
 })
 
+app.delete('/recetas/planeadas',(request,response)=>{
+    let respuesta;
+    let params=[request.query.planned_recipe_id]
+    let sql="DELETE FROM planned_recipes WHERE planned_recipe_id=?"
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message:err};
+        }
+        else{
+            if(res.affectedRows>0){
+                respuesta={error:false, type:1, message:` receta con id ${request.query.planned_recipe_id} eliminado correctamente`};
+            }
+            else{
+                respuesta={error:true, type:-1, message:` receta con id ${request.query.planned_recipe_id} no encontrado`};
+            }
+        }
+        response.send(respuesta);
+    })
+})
+
 
 
 
@@ -1196,16 +1216,16 @@ app.get('/usuario',(request,response)=>{
     let sql;
     if(request.query.user_id!=null){
         params=[request.query.user_id]
-        sql=`SELECT * FROM users 
+        sql=`SELECT user_id, username, profile_picture FROM users 
             WHERE user_id=?`
     }else if(request.query.username!=null){
         if(request.query.username.length>0){
             params=[request.query.username]
-            sql=`SELECT * FROM users 
-                WHERE username=?`
+            sql=`SELECT user_id, username, profile_picture FROM users 
+            WHERE username=?`
         }}
         else{
-        sql=`SELECT * FROM users`
+        sql=`SELECT user_id, username, profile_picture FROM users`
     }
     connection.query(sql,params,(err,res)=>{
         if (err){
@@ -1215,11 +1235,7 @@ app.get('/usuario',(request,response)=>{
             if(res.length>0){
                 respuesta={error:true, code:200, type:1, message: res};
             }else{
-                if(request.query.user_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe usuario con id ${request.query.user_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay usuarios en la base de datos`};
-                }
+                respuesta={error:true, code:200, type:-1, message: res};
             }
         }
         response.send(respuesta)
@@ -1414,7 +1430,7 @@ app.post('/usuario/login',(request,response)=>{
             if(res.length>0){
                 respuesta={error:true, code:200, type:1, message: res};
             }else{
-                respuesta={error:true, code:200, type:-1, message: `No existe usuario con id ${request.body.username}`};
+                respuesta={error:true, code:200, type:-1, message: `No existe usuario con username ${request.body.username}`};
             }
         }
         console.log(err)
@@ -1427,48 +1443,30 @@ app.post('/usuario/login',(request,response)=>{
 
 
 
-app.put('/usuario',(request,response)=>{
+app.put('/usuario/config',(request,response)=>{
     let respuesta;
-    if(request.body.user_id!=null){
-        let username=request.body.username;
-        let password=request.body.password;
-        let email=request.body.email;
-        if(request.body.username.length==0){ username=null }
-        if(request.body.password.length==0){ password=null }
-        if(request.body.email.length==0){ email=null }
-        let params=[username,password,email,request.body.user_id]
-
-        let sql=`UPDATE users SET username=COALESCE(?,username), password=COALESCE(?,password), email=COALESCE(?,email) WHERE user_id=?`
-        connection.query(sql,params,(err,res)=>{
-            if (err){
-                if (err.errno==1452){
-                    respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
-                }else  if (err.errno==1366){
-                    respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-                }else{
-                    respuesta={error:true, type:0, message: err};
-                }
+    // if(request.body.username.length==0){request.body.username=null}
+    if(request.body.password.length==0){request.body.password=null}
+    if(request.body.email.length==0){request.body.email=null}
+    if(request.body.profile_picture.length==0){request.body.profile_picture=null}
+    let params=[request.body.username,request.body.password,request.body.email,request.body.profile_picture, request.body.user_id]
+    let sql=`UPDATE users SET username=COALESCE(?,username), password=COALESCE(?,password), 
+    email=COALESCE(?,email), profile_picture=COALESCE(?,profile_picture) WHERE user_id=?`
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.affectedRows>0){
+                respuesta={error:false, type:1, message: `usuario con id ${request.body.user_id} modificado correctamente`};
             }
             else{
-                if(res.affectedRows>0){
-                    if(res.changedRows>0){
-                        respuesta={error:false, type:1, message: `usuario con id ${request.body.user_id} modificado correctamente`};
-                    }
-                    else{
-                        respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
-                    }
-                }
-                else{
-
-                    respuesta={error:true, type:-3, message: `usuario con id ${request.body.user_id} no encontrado`};
-                }
+                respuesta={error:true, type:-1, message: `usuario con id ${request.body.user_id} no encontrado`};
             }
-            response.send(respuesta)
-        })
-    }else{
-        respuesta={error:true, type:-4, message: `id del usuario no especificado`};
-        response.send(respuesta);
-    }
+        }
+        response.send(respuesta)
+    })
+  
 })
 
 
