@@ -92,8 +92,44 @@ app.get('/recetas',(request,response)=>{
        
     })
 })
+///Sacar las recetas ricas en x micronutriente
+app.get('/recetas/ricas',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.recipe_id!=null){
+        params=[request.query.micronutrient_id]
+        sql=`SELECT recipe_ingredient.recipe_id AS recipe_id, 
+        ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
 
+        SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
+        FROM ingredient_micronutrient
+        JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
 
+        WHERE micronutrient_id=?
+        GROUP BY recipe_id, micronutrient_id
+        ORDER BY percent DESC
+        LIMIT 6`
+    }
+    
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                if(request.query.recipe_id!=null){
+                    respuesta={error:true, code:200, type:-1, message: `No existe receta con id ${request.query.recipe_id}`};
+                }else{
+                    respuesta={error:true, code:200, type:-2, message: res};
+                }
+               
+            } response.send(respuesta)
+        }
+    })
+})
 
 app.get('/recetas/detalles',(request,response)=>{
     let respuesta;
@@ -361,33 +397,6 @@ app.delete('/recetas',(request,response)=>{
 })
 
 
-
-
-app.get('/recetas/planeadas',(request,response)=>{
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.user_id>0){
-        params=[request.query.user_id]
-        sql=`SELECT plan_rec_id, date, recipe_id, isConsumed FROM planned_recipes WHERE user_id=?`
-    }else{
-        sql=`SELECT * FROM planned_recipes`
-    }
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                respuesta={error:true, code:200, type:-1, message: res};
-            } response.send(respuesta)
-        }
-         
-       
-    })
-})
 
 
 
@@ -689,8 +698,35 @@ app.get('/ingredientes/avoid',(request,response)=>{
         response.send(respuesta)
     })
 })
-
-
+///// query para sacar los ingredientes ricos en micronutrientes
+app.get('/ingredientes/micronutrientes',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.micronutrient_id!=null){
+        params=[request.query.micronutrient_id]
+        sql=`SELECT ingredient_id FROM ingredient_micronutrient 
+        WHERE micronutrient_id=? ORDER BY micronutrient_percent
+        LIMIT 12`
+    }
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                if(request.query.ingredient_id!=null){
+                    respuesta={error:true, code:200, type:-1, message: `No existe ingrediente de micronutriente con este id ${request.query.ingredient_id}`};
+                }else{
+                    respuesta={error:true, code:200, type:-2, message: `No hay este ingrediente de micronutriente en la base de datos`};
+                }
+            }
+        }
+        response.send(respuesta)
+    })
+})
 
 app.post('/ingredientes',(request,response)=>{
     let respuesta;
