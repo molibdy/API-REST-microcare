@@ -647,7 +647,7 @@ app.get('/ingredientes',(request,response)=>{
         params=[request.query.ingredient_id]
         sql=`SELECT * FROM ingredients  WHERE ingredient_id=?`
     }else{
-        sql=`SELECT * FROM ingredients`
+        sql=`SELECT ingredient_id, ingredient_name FROM ingredients`
     }
     connection.query(sql,params,(err,res)=>{
         if (err){
@@ -657,11 +657,33 @@ app.get('/ingredientes',(request,response)=>{
             if(res.length>0){
                 respuesta={error:true, code:200, type:1, message: res};
             }else{
-                if(request.query.ingredient_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe ingrediente de dieta con id ${request.query.ingredient_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay este ingrediente en la base de datos`};
-                }
+                respuesta={error:true, code:200, type:-1, message: res};
+
+            }
+        }
+        response.send(respuesta)
+    })
+})
+app.get('/ingredientes/avoid',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.ingredient_id!=null){
+        params=[request.query.ingredient_id]
+        sql=`SELECT * FROM ingredients  WHERE ingredient_id=?`
+    }else{
+        sql=`SELECT ingredient_id, avoid_id FROM avoid_ingredients`
+    }
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                respuesta={error:true, code:200, type:-1, message: res};
+
             }
         }
         response.send(respuesta)
@@ -694,6 +716,68 @@ app.post('/ingredientes',(request,response)=>{
         }
         response.send(respuesta)
     })
+})
+
+app.post('/ingredientes/avoid',(request,response)=>{
+    console.log('entrada al post');
+    let respuesta;
+    let paramsGet= [request.body.user_id]
+    
+    let sqlDelete=`DELETE from avoid_ingredients where user_id = ?`;
+
+    connection.query(sqlDelete,paramsGet,(err,res)=>{
+        console.log('entrada al post');
+
+        if(err){
+            console.log(err);
+            respuesta={error:true, type:0, message: err};
+            response.send(respuesta)
+
+        }
+        else{ 
+                console.log(res);
+                let sql2 = `INSERT INTO avoid_ingredients (user_id, ingredient_id) VALUES `
+                params2=[]
+                console.log(request.body.ingredientes);
+                    for(let i=0;i<request.body.ingredientes.length;i++){
+                        params2.push(request.body.user_id,request.body.ingredientes[i].ingredient_id)
+                        console.log(request.body.ingredientes[i].ingredient_id);
+
+                        if(i==request.body.ingredientes.length-1){
+                            sql2 += `(?,?)`
+                        }else{
+                            sql2 += `(?,?),`
+                        }  
+                    }
+                    console.log(sql2);
+
+            connection.query(sql2,params2,(negativo,positivo)=>{
+                console.log(params2.ingredientes);
+
+                    if (negativo){
+                    console.log('negativo');
+                        console.log(negativo)
+                    }
+                    else{
+                        console.log(positivo)
+                        console.log('positivo')
+                        if(positivo.affectedRows>0){
+                            respuesta={error:false, type:1, message: positivo};
+                        }
+                        else{
+                            respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
+                        }
+                    }
+                    console.log(respuesta)
+
+                })  
+            
+        } 
+    })
+
+        
+    
+
 })
 
 
