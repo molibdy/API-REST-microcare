@@ -1555,8 +1555,6 @@ app.get('/progreso',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    if(request.query.user_id!=null && request.query.date!=null){
-        console.log('progreso con id y fecha')
         params=[request.query.user_id, request.query.date]
         
         sql=`SELECT progress.micronutrient_id, progress.percent, 
@@ -1568,29 +1566,13 @@ app.get('/progreso',(request,response)=>{
         JOIN micronutrients ON micronutrients.micronutrient_id = progress.micronutrient_id 
         JOIN micronutrient_groups ON micronutrients.group_id=micronutrient_groups.group_id
         WHERE progress.user_id=? AND progress.date=?`
-    }else if(request.query.user_id!=null){  // Selecciona la media del usuario de cada día
-        
-        params=[request.query.user_id]
-        sql=`SELECT date, AVG(percent) AS percent FROM progress 
-        WHERE progress.user_id=? 
-        GROUP BY progress.date
-        ORDER BY progress.date`
-    }else{          
-        // console.log('progreso sin parametros')             // Selecciona la media de todos los users de cada día
-        params=[]
-        sql=`SELECT date, AVG(percent) AS percent FROM progress 
-        GROUP BY progress.date
-        ORDER BY progress.date`
-    }
+    
         connection.query(sql,params,(err,res)=>{
             if (err){
                 console.log('error en /progreso')
-                console.log(err)
                 respuesta={error:true, type:0, message: err};
             }
             else{
-                console.log('res de /progreso')
-                console.log(res)
                 if(res.length>0){
                     respuesta={error:false, code:200, type:1, message: res};
                 }else{
@@ -1602,6 +1584,70 @@ app.get('/progreso',(request,response)=>{
         })
     
 })
+
+
+
+app.get('/progreso/average',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.user_id!=null){  
+        
+        params=[request.query.user_id]
+        sql=`SELECT date, AVG(percent) AS percent FROM progress 
+        WHERE progress.user_id=? 
+        GROUP BY progress.date
+        ORDER BY progress.date`
+    }else{          
+        params=[]
+        sql=`SELECT date, AVG(percent) AS percent FROM progress 
+        GROUP BY progress.date
+        ORDER BY progress.date`
+    }
+        connection.query(sql,params,(err,res)=>{
+            if (err){
+                console.log('error en /progreso/average')
+                respuesta={error:true, type:0, message: err};
+            }
+            else{
+                // Average de TODOS
+                if(request.query.user_id==null){
+                    if(res.length>0){
+                        respuesta={error:false, code:200, type:1, message: res};
+                    }else{
+                        respuesta={error:false, code:200, type:-1, message: res};
+                    }
+                    response.send(respuesta)
+
+                }else{    // Average de USER y todos sin user
+                    let sql2=`SELECT date, AVG(percent) AS percent FROM progress
+                    WHERE progress.user_id!=?  
+                    GROUP BY progress.date
+                    ORDER BY progress.date`
+
+                    connection.query(sql2,params,(err,total)=>{
+                        if (err){
+                            console.log('error en /progreso/average')
+                            respuesta={error:true, type:0, message: err};
+                        }
+                        else{
+                            respuesta={error:false, code:200, type:1, userAverage: res, totalAverage: total};
+                        }
+                        response.send(respuesta)
+                    })        
+                }
+
+
+                
+            }
+            
+        })
+    
+})
+
+
+
+
 
 
 // Inicializar el progreso del día en 0
