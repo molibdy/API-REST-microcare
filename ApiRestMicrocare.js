@@ -97,7 +97,6 @@ app.get('/recetas/ricas',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    console.log("entrando en recetas ricas")
     if(request.query.micronutrient_id!=null){
         params=[request.query.micronutrient_id]
         sql=`SELECT recipe_ingredient.recipe_id AS recipe_id, 
@@ -111,7 +110,6 @@ app.get('/recetas/ricas',(request,response)=>{
         GROUP BY recipe_id, micronutrient_id
         ORDER BY percent DESC
         LIMIT 6`
-        console.log("saliendo")
     }
     
     connection.query(sql,params,(err,res)=>{
@@ -137,7 +135,6 @@ app.get('/recetas/detalles',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    console.log('entrando en recetas/detalles')
     if(request.query.recipe_id!=null){
         params=[request.query.recipe_id]
         sql=`SELECT recipe_ingredient.recipe_id, diets.diet_name, ingredients.ingredient_name, recipe_ingredient.total_grams, 
@@ -175,7 +172,6 @@ app.get('/recetas/parati',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    console.log('entrando en recetas/parati') 
         params=[request.query.user_id, request.query.user_id, request.query.date]
         sql=`SELECT DISTINCT recetas.recipe_id 
         FROM (
@@ -213,7 +209,6 @@ app.get('/recetas/parati',(request,response)=>{
                 respuesta={error:true, code:200, type:-1, message: res};
                
             } 
-            console.log(res)
         }
         response.send(respuesta)
         
@@ -225,7 +220,6 @@ app.get('/recetas/planeadas',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    console.log('entrando en recetas/planeadas') 
         params=[request.query.user_id, request.query.date]
         sql=`SELECT planned_recipes.planned_recipe_id, planned_recipes.date, planned_recipes.recipe_id, 
         planned_recipes.isConsumed, recipes.recipe_name 
@@ -245,7 +239,6 @@ app.get('/recetas/planeadas',(request,response)=>{
                 respuesta={error:true, code:200, type:-1, message: res};
                
             } 
-            console.log(res)
         }
         response.send(respuesta)
         
@@ -267,8 +260,6 @@ app.post('/recetas/planeadas', (request,response) =>{
             console.log(err)
         }
         else{
-            console.log('res de post recetas planeadas')
-            console.log(res)
             if(res.affectedRows>0){
                 respuesta={error:false, code:200, type:1, message: res.insertId};
             }
@@ -778,17 +769,15 @@ app.post('/ingredientes',(request,response)=>{
 })
 
 app.post('/ingredientes/avoid',(request,response)=>{
-    console.log('entrada al post');
     let respuesta;
     let paramsGet= [request.body.user_id]
     
     let sqlDelete=`DELETE from avoid_ingredients where user_id = ?`;
 
     connection.query(sqlDelete,paramsGet,(err,res)=>{
-        console.log('entrada al post');
 
         if(err){
-            console.log(err);
+            console.log('error en post ingredientes/avoid')
             respuesta={error:true, type:0, message: err};
             response.send(respuesta)
 
@@ -797,10 +786,8 @@ app.post('/ingredientes/avoid',(request,response)=>{
                 console.log(res);
                 let sql2 = `INSERT INTO avoid_ingredients (user_id, ingredient_id) VALUES `
                 params2=[]
-                console.log(request.body.ingredientes);
                     for(let i=0;i<request.body.ingredientes.length;i++){
                         params2.push(request.body.user_id,request.body.ingredientes[i].ingredient_id)
-                        console.log(request.body.ingredientes[i].ingredient_id);
 
                         if(i==request.body.ingredientes.length-1){
                             sql2 += `(?,?)`
@@ -808,18 +795,14 @@ app.post('/ingredientes/avoid',(request,response)=>{
                             sql2 += `(?,?),`
                         }  
                     }
-                    console.log(sql2);
+
 
             connection.query(sql2,params2,(negativo,positivo)=>{
-                console.log(params2.ingredientes);
 
                     if (negativo){
-                    console.log('negativo');
-                        console.log(negativo)
+                        console.log('error en post ingredientes/avoid')
                     }
                     else{
-                        console.log(positivo)
-                        console.log('positivo')
                         if(positivo.affectedRows>0){
                             respuesta={error:false, type:1, message: positivo};
                         }
@@ -827,7 +810,6 @@ app.post('/ingredientes/avoid',(request,response)=>{
                             respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
                         }
                     }
-                    console.log(respuesta)
 
                 })  
             
@@ -846,9 +828,8 @@ app.post('/ingredientes/micronutrientes',(request,response)=>{
     let params=[];
     let sql=`SELECT micronutrient_id, usda_id, cdr_amount, cdr_unit FROM micronutrients`;
     connection.query(sql,(err,micros)=>{
-        if(err) console.log(err)
+        if(err)   console.log('error en ingredientes/micronutrientes')
         else{
-            // console.log(micros)
             for(i=0;i<micros.length;i++){
                 for(j=0;j<request.body.micronutrients.length;j++){
                     // matchear los micronutrientes de nuestra tabla con los obtenidos de usda
@@ -882,7 +863,6 @@ app.post('/ingredientes/micronutrientes',(request,response)=>{
                     sqlPost+=`(?,?,?,?,?,?),`
                 }
             }
-            // console.log(params)
             connection.query(sqlPost,params,(err,res)=>{
                 if (err){
                     respuesta={error:true, type:0, message: err};
@@ -972,7 +952,6 @@ app.delete('/ingredientes',(request,response)=>{
 ///////// TABLA INTAKES
 
 app.get('/ingestas',(request,response)=>{
-    console.log('holii')
     let respuesta;
     let params;
     let sql;
@@ -1117,14 +1096,12 @@ app.delete('/ingestas',(request,response)=>{
  //////////// ingestas / favoritos 
  
  app.post('/ingestas/favoritos',(request,response)=>{
+     console.log('entrando a post ingestas/favoritos')
     let respuesta;
     let params=[request.body.user_id, request.body.name, request.body.intake_id];
     let sql=`INSERT INTO favourites (user_id, name, intake_id) VALUES (?,?,?)`;
 
-    console.log('fuera query');
-    console.log(params);
     connection.query(sql,params,(err,res)=>{
-        console.log('dentro query');
 
         if (err){
             respuesta = err;
@@ -1132,16 +1109,12 @@ app.delete('/ingestas',(request,response)=>{
         else{
             if(res.affectedRows>0){
                 respuesta={error:false, type:1, message: res.insertId}
-                console.log(respuesta);
 
             }
             else{
                 respuesta={error:true, type:2, message: `El intake no se ha podido añadir a la base de datos`};
-                                console.log(respuesta);
-
             }
         }   response.send(respuesta)
-            console.log(respuesta);
 
 
 
@@ -1182,7 +1155,6 @@ app.delete('/ingestas/favorito',(request,response)=>{
     if(request.query.favourite_id!=null){
         let params=[request.query.favourite_id];
         let sql=`DELETE FROM favourites WHERE favourite_id = ?`;
-        console.log(params);
         connection.query(sql,params,(err,res)=>{
         
             if (err){   
@@ -1234,7 +1206,7 @@ app.get('/usuario',(request,response)=>{
         if (err){
             respuesta={error:true, type:0, message: err};
         }
-        else{ console.log(res)
+        else{ 
             if(res.length>0){
                 respuesta={error:true, code:200, type:1, message: res};
             }else{
@@ -1294,7 +1266,6 @@ app.post('/usuario/registro',(request,response)=>{
                 respuesta={error:true, code:200, type:3, message: "el usuario " + res + " ya esta registrado"};     
             }
             else{
-                console.log('hola');
                 connection.query(sqlPost,paramsPost,(negativo,positivo)=>{
                     if (negativo){
                         if (negativo.errno==1048){
@@ -1315,7 +1286,6 @@ app.post('/usuario/registro',(request,response)=>{
                             respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
                         }
                     }response.send(respuesta)
-                    console.log(respuesta)
                 }) 
             }
         } 
@@ -1328,7 +1298,7 @@ app.post('/usuario/registro',(request,response)=>{
 })
 
 app.post('/usuario/preferencias',(request,response)=>{
-    console.log('entrada al post');
+    console.log('entrada al select usuario/preferencias');
     let respuesta;
     let paramsGet= []
     let paramsPost=[request.body.username,request.body.password,request.body.email];
@@ -1360,7 +1330,7 @@ app.post('/usuario/preferencias',(request,response)=>{
 
 
     connection.query(sqlGet,paramsGet,(err,res)=>{
-        console.log('entrada al post');
+        console.log('entrada al post usuario/preferencias');
 
         if(err){
             console.log(err);
@@ -1667,8 +1637,7 @@ app.post('/progreso/start',(request,response)=>{
         }
         connection.query(sql,params,(err,res)=>{
             if (err){
-                // console.log('err de /progreso/start')
-                // console.log(err)
+                console.log('err de /progreso/start'); console.log(err)
                 if (err.errno==1048){
                     respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
                 }else  if (err.errno==1366){
@@ -1678,8 +1647,6 @@ app.post('/progreso/start',(request,response)=>{
                 }
             }
             else{
-                // console.log('res de /progreso/start')
-                // console.log(res)
                 if(res.affectedRows>0){
                     respuesta={error:false, type:1, message: `progreso añadido correctamente con id ${res.insertId}`};
                 }
@@ -1876,7 +1843,6 @@ app.put('/progreso',(request,response)=>{
 // /// GRUPOS
 
 app.get('/micronutrientes/grupos',(request,response)=>{
-    console.log('grupos')
     let respuesta;
     let params;
     let sql;
