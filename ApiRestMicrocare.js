@@ -97,7 +97,8 @@ app.get('/recetas/ricas',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    if(request.query.recipe_id!=null){
+    console.log("entrando en recetas ricas")
+    if(request.query.micronutrient_id!=null){
         params=[request.query.micronutrient_id]
         sql=`SELECT recipe_ingredient.recipe_id AS recipe_id, 
         ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
@@ -110,6 +111,7 @@ app.get('/recetas/ricas',(request,response)=>{
         GROUP BY recipe_id, micronutrient_id
         ORDER BY percent DESC
         LIMIT 6`
+        console.log("saliendo")
     }
     
     connection.query(sql,params,(err,res)=>{
@@ -725,7 +727,8 @@ app.get('/ingredientes/micronutrientes',(request,response)=>{
     let sql;
     if(request.query.micronutrient_id!=null){
         params=[request.query.micronutrient_id]
-        sql=`SELECT ingredient_id FROM ingredient_micronutrient 
+        sql=`SELECT ingredients.ingredient_id, ingredient_name FROM ingredient_micronutrient 
+        JOIN ingredients ON ingredients.ingredient_id = ingredient_micronutrient.ingredient_id
         WHERE micronutrient_id=? ORDER BY micronutrient_percent
         LIMIT 12`
     }
