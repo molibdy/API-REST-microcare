@@ -1662,48 +1662,89 @@ app.post('/progreso/start',(request,response)=>{
 
 
 app.put('/progreso',(request,response)=>{
-            let respuesta;
-            if(request.body.user_id>0){
-                
-                let params=[]
-                let sql=`UPDATE progress SET percent = (CASE micronutrient_id `
-                for(let i=0;i<request.body.percents.length;i++){
-                    params.push(request.body.percents[i].micronutrient_id,request.body.percents[i].percent)
-                    sql += `WHEN ? THEN percent + ? `
+    let respuesta;
+    if(request.body.user_id>0){
+        
+        let params=[]
+        let sql=`UPDATE progress SET percent = (CASE micronutrient_id `
+        for(let i=0;i<request.body.percents.length;i++){
+            params.push(request.body.percents[i].micronutrient_id,request.body.percents[i].percent)
+            sql += `WHEN ? THEN percent + ? `
+        }
+        params.push(request.body.user_id, request.body.date)
+        sql += `END) WHERE user_id=? AND date=?`
+        connection.query(sql,params,(err,res)=>{
+            if (err){
+                console.log(err)
+                if (err.errno==1452){
+                    respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
+                }else  if (err.errno==1366){
+                    respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
+                }else{
+                    respuesta={error:true, type:0, message: err};
                 }
-                params.push(request.body.user_id, request.body.date)
-                sql += `END) WHERE user_id=? AND date=?`
-                connection.query(sql,params,(err,res)=>{
-                    if (err){
-                        console.log(err)
-                        if (err.errno==1452){
-                            respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
-                        }else  if (err.errno==1366){
-                            respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
-                        }else{
-                            respuesta={error:true, type:0, message: err};
-                        }
+            }
+            else{
+                if(res.affectedRows>0){
+                    if(res.changedRows>0){
+                        respuesta={error:false, type:1, message: `progresos modificados correctamente`};
                     }
                     else{
-                        if(res.affectedRows>0){
-                            if(res.changedRows>0){
-                                respuesta={error:false, type:1, message: `progresos modificados correctamente`};
-                            }
-                            else{
-                                respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
-                            }
-                        }
-                        else{
-                            respuesta={error:true, type:-3, message: `El usuario con id ${request.body.user_id} no tiene progresos el día ${request.body.date}`};
-                        }
+                        respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
                     }
-                    response.send(respuesta)
-                })
-            }else{
-                respuesta={error:true, type:-4, message: `user_id no especificado`};
-                response.send(respuesta);
+                }
+                else{
+                    respuesta={error:true, type:-3, message: `El usuario con id ${request.body.user_id} no tiene progresos el día ${request.body.date}`};
+                }
             }
+            response.send(respuesta)
         })
+    }else{
+        respuesta={error:true, type:-4, message: `user_id no especificado`};
+        response.send(respuesta);
+    }
+})
+
+
+
+app.put('/progreso/remove',(request,response)=>{
+    let respuesta;
+        let params=[]
+        let sql=`UPDATE progress SET percent = (CASE micronutrient_id `
+        for(let i=0;i<request.body.percents.length;i++){
+            params.push(request.body.percents[i].micronutrient_id,request.body.percents[i].percent)
+            sql += `WHEN ? THEN percent - ? `
+        }
+        params.push(request.body.user_id, request.body.date)
+        sql += `END) WHERE user_id=? AND date=?`
+        connection.query(sql,params,(err,res)=>{
+            if (err){
+                console.log(err)
+                if (err.errno==1452){
+                    respuesta={error:true, type:-2, message:'el id especificado para uno de los campos no existe'}
+                }else  if (err.errno==1366){
+                    respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto, detalle: ${err.sqlMessage}`}
+                }else{
+                    respuesta={error:true, type:0, message: err};
+                }
+            }
+            else{
+                if(res.affectedRows>0){
+                    if(res.changedRows>0){
+                        respuesta={error:false, type:1, message: `progresos modificados correctamente`};
+                    }
+                    else{
+                        respuesta={error:true, type:2, message: `No se ha modificado ningún dato`};
+                    }
+                }
+                else{
+                    respuesta={error:true, type:-3, message: `El usuario con id ${request.body.user_id} no tiene progresos el día ${request.body.date}`};
+                }
+            }
+            response.send(respuesta)
+        })
+    
+})
         
 
 
