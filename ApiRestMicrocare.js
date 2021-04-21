@@ -1975,6 +1975,26 @@ app.put('/progreso/remove',(request,response)=>{
         })
     
 })
+
+
+app.delete('/ingredient_micronutrient',(request,response)=>{
+    let respuesta;
+        let sql=`DELETE * FROM ingredient_micronutrient`;
+        connection.query(sql,(err,res)=>{
+            if (err){   
+                respuesta={error:true, type:0, message:err};
+            }
+            else{
+                if(res.affectedRows>0){
+                    respuesta={error:false, type:1, message: `favourite con id ${request.body.favourite_id} eliminado correctamente`};
+                }
+                else{
+                    respuesta={error:true, type:-1, message: `favourite con id ${request.body.favourite_id} no encontrado`};
+                }
+            }
+            response.send(respuesta);
+        }) 
+})
         
 
 
