@@ -1973,13 +1973,10 @@ app.put('/progreso/remove',(request,response)=>{
             }
             response.send(respuesta)
         })
-<<<<<<< HEAD
 
 
-=======
-    
 })
->>>>>>> moli
+
         
 
 
