@@ -575,17 +575,41 @@ app.get('/micronutrientes/receta',(request,response)=>{
 })
 
 
-app.get('/micronutrientes/ingesta',(request,response)=>{
+app.get('/micronutrientes/intakes',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    params=[request.query.intake_id]
-    sql=`SELECT ingredient_micronutrient.micronutrient_id as micronutrient_id, 
-    SUM(ingredient_micronutrient.micronutrient_percent*intake_ingredient.grams/ingredient_micronutrient.grams) AS percent
-    FROM ingredient_micronutrient
-    JOIN intake_ingredient ON intake_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
-    WHERE intake_ingredient.intake_id=?
-    ORDER BY percent DESC`
+    if(request.query.recipe_id!=null){
+        params=[request.query.recipe_id]
+        sql=`SELECT ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
+        micronutrients.micronutrient_name AS micronutrient_name,
+        micronutrients.acronym AS acronym,
+        micronutrient_groups.color AS color,
+        micronutrient_groups.group_id AS group_id,
+        SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
+        FROM ingredient_micronutrient
+        JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+        JOIN micronutrients ON micronutrients.micronutrient_id=ingredient_micronutrient.micronutrient_id
+        JOIN micronutrient_groups ON micronutrient_groups.group_id=micronutrients.group_id
+        WHERE recipe_ingredient.recipe_id=?
+        GROUP BY micronutrient_id
+        ORDER BY percent DESC`
+    }else{
+        sql=`SELECT recipe_ingredient.recipe_id AS recipe_id, ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
+        micronutrients.micronutrient_name AS micronutrient_name,
+        micronutrients.acronym AS acronym,
+        micronutrient_groups.color AS color,
+        micronutrient_groups.group_id AS group_id,
+        SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
+        FROM ingredient_micronutrient
+        JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+        JOIN micronutrients ON micronutrients.micronutrient_id=ingredient_micronutrient.micronutrient_id
+        JOIN micronutrient_groups ON micronutrient_groups.group_id=micronutrients.group_id
+        GROUP BY recipe_id, micronutrient_id
+        ORDER BY recipe_id, percent DESC`
+    }
+
+    
    
     connection.query(sql,params,(err,res)=>{
         if (err){
@@ -602,6 +626,8 @@ app.get('/micronutrientes/ingesta',(request,response)=>{
         response.send(respuesta)
     })
 })
+
+
 
 
 
@@ -672,7 +698,8 @@ app.get('/ingredientes/avoid',(request,response)=>{
         params=[request.query.ingredient_id]
         sql=`SELECT * FROM ingredients  WHERE ingredient_id=?`
     }else{
-        sql=`SELECT ingredient_id, avoid_id FROM avoid_ingredients`
+        sql=`SELECT  avoid_ingredients.ingredient_id, avoid_id, ingredients.ingredient_name FROM avoid_ingredients 
+        JOIN ingredients ON ingredients.ingredient_id = avoid_ingredients.ingredient_id`
     }
     connection.query(sql,params,(err,res)=>{
         if (err){
@@ -686,6 +713,60 @@ app.get('/ingredientes/avoid',(request,response)=>{
 
             }
         }
+        response.send(respuesta)
+    })
+})
+app.get('/ingredientes/allergen',(request,response)=>{
+    console.log("entrando al get de alergias");
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.ingredient_id!=null){
+        params=[request.query.ingredient_id]
+        sql=`SELECT * FROM ingredients  WHERE ingredient_id=?`
+    }else{
+        sql=`SELECT  user_allergen.allergen_id, user_id, allergens.allergen_name FROM user_allergen 
+            JOIN allergens ON allergen.allergen_id = user_allergen.allergen_id`
+    }
+    connection.query(sql,params,(err,res)=>{
+        console.log("entrando al mysq de alergias" + res);
+        console.log(res);
+        console.log(err);
+
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                respuesta={error:true, code:200, type:-1, message: res};
+
+            }
+        }
+        response.send(respuesta)
+    })
+})
+
+app.get('/ingredientes/all_allergen',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    if(request.query.allergic!=null){
+        params=[request.query.allergic]
+        sql=`SELECT * FROM allergens  WHERE allergen_id=?`
+    }else{
+        sql=`SELECT  * FROM allergens`
+    }
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+           respuesta = res
+
+            }
+        
         response.send(respuesta)
     })
 })
@@ -723,7 +804,7 @@ app.post('/ingredientes/avoid',(request,response)=>{
     let respuesta;
     let paramsGet= [request.body.user_id]
     
-    let sqlDelete=`DELETE from avoid_ingredients where user_id = ?`;
+    let sqlDelete=`DELETE from avoid_ingredients WHERE user_id = ?`;
 
     connection.query(sqlDelete,paramsGet,(err,res)=>{
         console.log('entrada al post');
@@ -736,47 +817,115 @@ app.post('/ingredientes/avoid',(request,response)=>{
         }
         else{ 
                 console.log(res);
-                let sql2 = `INSERT INTO avoid_ingredients (user_id, ingredient_id) VALUES `
-                params2=[]
-                console.log(request.body.ingredientes);
-                    for(let i=0;i<request.body.ingredientes.length;i++){
-                        params2.push(request.body.user_id,request.body.ingredientes[i].ingredient_id)
-                        console.log(request.body.ingredientes[i].ingredient_id);
+                if(request.body.ingredientes.length>0){
+                    let sql2 = `INSERT INTO avoid_ingredients (user_id, ingredient_id) VALUES `
+                    params2=[]
+                    console.log(request.body.ingredientes);
+                        for(let i=0;i<request.body.ingredientes.length;i++){
+                            params2.push(request.body.user_id,request.body.ingredientes[i].ingredient_id)
+                            console.log(request.body.ingredientes[i].ingredient_id);
 
-                        if(i==request.body.ingredientes.length-1){
-                            sql2 += `(?,?)`
-                        }else{
-                            sql2 += `(?,?),`
-                        }  
-                    }
-                    console.log(sql2);
-
-            connection.query(sql2,params2,(negativo,positivo)=>{
-                console.log(params2.ingredientes);
-
-                    if (negativo){
-                    console.log('negativo');
-                        console.log(negativo)
-                    }
-                    else{
-                        console.log(positivo)
-                        console.log('positivo')
-                        if(positivo.affectedRows>0){
-                            respuesta={error:false, type:1, message: positivo};
+                            if(i==request.body.ingredientes.length-1){
+                                sql2 += `(?,?)`
+                            }else{
+                                sql2 += `(?,?),`
+                            }  
                         }
-                        else{
-                            respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
-                        }
-                    }
-                    console.log(respuesta)
+                        console.log(sql2);
 
-                })  
+                    connection.query(sql2,params2,(negativo,positivo)=>{
+                        console.log(params2);
+
+                            if (negativo){
+                            console.log('negativo');
+                                console.log(negativo)
+                            }
+                            else{
+                                console.log(positivo)
+                                console.log('positivo')
+                                if(positivo.affectedRows>0){
+                                    respuesta={error:false, type:1, message: positivo};
+                                }
+                                else{
+                                    respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
+                                }
+                            }
+                            console.log(respuesta)
+
+                    })  
+                }
+                else{
+                    response.send(res)
+                
+                }    
             
-        } 
+            } 
     })
 
-        
+})
+
+app.post('/ingredientes/allergen',(request,response)=>{
+    console.log('entrada al post de alergenos');
+    let respuesta;
+    let paramsGet= [request.body.user_id]
     
+    let sqlDelete=`DELETE from user_allergen WHERE user_id = ?`;
+
+    connection.query(sqlDelete,paramsGet,(err,res)=>{
+        console.log('entrada al mysql de alergenos');
+
+        if(err){
+            console.log(err);
+            respuesta={error:true, type:0, message: err};
+            response.send(respuesta)
+
+        }
+        else{ 
+                console.log(res);
+                if(request.body.alergias.length>0){
+                    let sql2 = `INSERT INTO user_allergen (user_id, allergen_id) VALUES `
+                    params2=[]
+                    console.log(request.body.alergias);
+                        for(let i=0;i<request.body.alergias.length;i++){
+                            params2.push(request.body.user_id,request.body.alergias[i].allergen_id)
+                            console.log(request.body.alergias[i].allergen_id);
+
+                            if(i==request.body.alergias.length-1){
+                                sql2 += `(?,?)`
+                            }else{
+                                sql2 += `(?,?),`
+                            }  
+                        }
+                        console.log(sql2);
+
+                    connection.query(sql2,params2,(negativo,positivo)=>{
+                        console.log(params2.ingredientes);
+
+                            if (negativo){
+                            console.log('negativo');
+                                console.log(negativo)
+                            }
+                            else{
+                                console.log(positivo)
+                                console.log('positivo')
+                                if(positivo.affectedRows>0){
+                                    respuesta={error:false, type:1, message: positivo};
+                                }
+                                else{
+                                    respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
+                                }
+                            }
+                            console.log(respuesta)
+
+                    })  
+                }
+                else{
+                    response.send(res)
+                
+                }    
+            
+            } 
+    })
 
 })
 
@@ -948,8 +1097,7 @@ app.post('/ingestas',(request,response)=>{
     let respuesta;
     let params=[request.body.user_id, request.body.date];
     let sql=`INSERT INTO intakes (user_id, date) VALUES (?,?)`;
-    let params2;
-    let sql2;
+    
     connection.query(sql,params,(err,res)=>{
         
 
@@ -959,34 +1107,86 @@ app.post('/ingestas',(request,response)=>{
         else{
             if(res.affectedRows>0){
                 respuesta={error:false, type:1, message: res.insertId}
+                let params2=[]
+                let sql2 = 'INSERT INTO intake_ingredient (intake_id, ingredient_id, grams ) VALUES '
 
-                for(let i=0; i<request.body.ingredientes.length; i++){
-        
-                    params2 = [res.insertId, request.body.ingredientes[i].ingrediente, request.body.ingredientes[i].peso]
-                    sql2 = 'INSERT INTO intake_ingredient (intake_id, ingredient_id, grams ) VALUES (?,?,?)'
-                        connection.query(sql2,params2,(error,positivo)=>{
-                            if(err){
-                        
-                            }
-                            else{
-                                respuesta = {error:false, type:1, message: positivo.insertId}
-                              
+                for(let i=0;i<request.body.ingredientes.length;i++){
+                    params2.push(res.insertId,request.body.ingredientes[i].ingrediente.ingredient_id, request.body.ingredientes[i].peso)
+                    console.log(request.body.ingredientes[i].ingredient_id);
 
-                            }
-                            
-                        })
-
+                    if(i==request.body.ingredientes.length-1){
+                        sql2 += `(?,?,?)`
+                    }else{
+                        sql2 += `(?,?,?),`
+                    }  
                 }
-            }
-            else{
-                respuesta={error:true, type:2, message: `El intake no se ha podido añadir a la base de datos`};
-            }
-        }    response.send(respuesta)
+                connection.query(sql2,params2,(error,positivo)=>{
+                    console.log(sql2);
+                    
 
+                        if(error){
+                            respuesta = {error}
+                    
+                        }
+                        else{
+                            respuesta = {error:false, type:1, message: res.insertId}
+                            console.log('respuetsa correcta de inatek_ingredients' + res.insertId);
+                            let params3;
+                            let sql3;
+                            if(res.insertId!=null){
+                                params=[res.insertId]
+                                sql=`SELECT ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
+                                micronutrients.micronutrient_name AS micronutrient_name,
+                                micronutrients.acronym AS acronym,
+                                micronutrient_groups.color AS color,
+                                micronutrient_groups.group_id AS group_id,
+                                SUM(ingredient_micronutrient.micronutrient_percent*intake_ingredient.grams/ingredient_micronutrient.grams) AS percent
+                                FROM ingredient_micronutrient
+                                JOIN intake_ingredient ON intake_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+                                JOIN micronutrients ON micronutrients.micronutrient_id=ingredient_micronutrient.micronutrient_id
+                                JOIN micronutrient_groups ON micronutrient_groups.group_id=micronutrients.group_id
+                                WHERE intake_ingredient.intake_id=?
+                                GROUP BY micronutrient_id
+                                ORDER BY percent DESC`
+                            }else{
+                                sql=`SELECT intake_ingredient.intake_id AS intake_id, ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
+                                micronutrients.micronutrient_name AS micronutrient_name,
+                                micronutrients.acronym AS acronym,
+                                micronutrient_groups.color AS color,
+                                micronutrient_groups.group_id AS group_id,
+                                SUM(ingredient_micronutrient.micronutrient_percent*intake_ingredient.grams/ingredient_micronutrient.grams) AS percent
+                                FROM ingredient_micronutrient
+                                JOIN intake_ingredient ON intake_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+                                JOIN micronutrients ON micronutrients.micronutrient_id=ingredient_micronutrient.micronutrient_id
+                                JOIN micronutrient_groups ON micronutrient_groups.group_id=micronutrients.group_id
+                                GROUP BY intake_id, micronutrient_id
+                                ORDER BY intake_id, percent DESC`
+                            }
+                        
+                            
+                           
+                            connection.query(sql,params,(err,micros)=>{
+                                if (err){
+                                    respuesta={error:true, type:0, message: err};
+                                }
+                                else{
+                                    if(micros.length>0){
+                                        respuesta={error:false, code:200, type:1, intake_id:res.insertId, microscore:micros};
+                                    }else{
+                                        respuesta={error:false, code:200, type:-1, intake_id:res.insertId, microscore:micros};
+                                        
+                                    }
+                                }
+                                response.send(respuesta)
+                            })
+                        }
+                        })             
+            }
+            
+        }    
     })
 
 })
-
 
 
 app.put('/ingestas',(request,response)=>{
@@ -1092,31 +1292,66 @@ app.delete('/ingestas',(request,response)=>{
 
 app.get('/ingestas/favoritos',(request,response)=>{
     let respuesta;
-    let params;
-    let sql;
-    if(request.query.favourite_id!=null){
-        params=[request.query.favourite_id]
-        sql=`SELECT * FROM favourites 
-            WHERE favourite_id=?`
-    }else{
-        sql=`SELECT * FROM favourites`
-    }
-    connection.query(sql,params,(err,res)=>{
+    let params = [request.query.user_id]
+    let sql=`SELECT favourites.*, intake_ingredient.intake_id AS intake_id, ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
+        micronutrients.micronutrient_name AS micronutrient_name,
+        micronutrients.acronym AS acronym,
+        micronutrient_groups.color AS color,
+        micronutrient_groups.group_id AS group_id,
+        SUM(ingredient_micronutrient.micronutrient_percent*intake_ingredient.grams/ingredient_micronutrient.grams) AS percent
+        FROM ingredient_micronutrient
+        JOIN intake_ingredient ON intake_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+        JOIN micronutrients ON micronutrients.micronutrient_id=ingredient_micronutrient.micronutrient_id
+        JOIN micronutrient_groups ON micronutrient_groups.group_id=micronutrients.group_id
+        JOIN favourites ON favourites.intake_id = intake_ingredient.intake_id
+        JOIN intakes ON intakes.intake_id = intake_ingredient.intake_id
+        WHERE intakes.user_id = ?
+        GROUP BY favourite_id, micronutrient_id
+        ORDER BY favourite_id, percent DESC`
+        console.log('entrando en get favs')
+        let arrFavoritos = [{favourite_id: 0, intake_id: 0, name: '', microscore: []}]
+
+    connection.query(sql,params,(err,favoritos)=>{
         if (err){
             respuesta={error:true, type:0, message: err};
         }
         else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                respuesta={error:true, code:200, type:-1, message: res};
+            
+            if(favoritos.length>0){
+                console.log('hasta aqui');
+                for(let i=0; i<favoritos.length;i++){
+                    
+                    if(favoritos[i].favourite_id == arrFavoritos[arrFavoritos.length -1].favourite_id){
+                        console.log('if ' + i);
+                        arrFavoritos[arrFavoritos.length -1].microscore.push({micronutrient_id: favoritos[i].micronutrient_id, 
+                                                                            micronutrient_name: favoritos[i].micronutrient_name,
+                                                                            acronym: favoritos[i].acronym,
+                                                                            color: favoritos[i].color,
+                                                                            percent: favoritos[i].percent,
+                                                                            group_id: favoritos[i].group_id})
 
-                
+                    }else{
+                        if(arrFavoritos[0].favourite_id==0){
+                            console.log('else ' + i);
+                            arrFavoritos[0] = {favourite_id: favoritos[i].favourite_id, intake_id: favoritos[i].intake_id, name: favoritos[i].name, microscore: []}
+                        }
+                        else{ arrFavoritos.push({favourite_id: favoritos[i].favourite_id, intake_id: favoritos[i].intake_id, name: favoritos[i].name, microscore: []})
+                        }
+
+                       
+                    }                
+
+                }              console.log('arrFavoritos');           console.log(arrFavoritos);
+
+
+                respuesta={error:true, code:200, type:1, message: arrFavoritos};
+                console.log(respuesta)
             }
         }
         response.send(respuesta)
     })
 })
+
 
 app.delete('/ingestas/favorito',(request,response)=>{
     let respuesta;
