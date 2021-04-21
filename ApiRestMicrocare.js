@@ -1316,6 +1316,29 @@ app.delete('/ingestas',(request,response)=>{
     })
 
 })
+app.post('/ingestas/consumidos', (request,response) =>{
+
+    let respuesta;
+
+    let params=[request.body.user_id,request.body.date,request.body.favourite_id, request.body.isConsumed];
+    let sql='INSERT INTO consumed_favourites (user_id,date,favourite_id,isConsumed) VALUES (?,?,?,?)';
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+            console.log('err de post recetas planeadas')
+            console.log(err)
+        }
+        else{
+            if(res.affectedRows>0){
+                respuesta={error:false, code:200, type:1, message: res.insertId};
+            }
+            else{
+                respuesta={error:true, code:200, message: `Receta no se ha podido añadir a la base de datos`};
+            }
+        }
+        response.send(respuesta)
+    })
+})
 
 app.get('/ingestas/favoritos',(request,response)=>{
     let respuesta;
@@ -1672,7 +1695,24 @@ app.put('/usuario/config',(request,response)=>{
   
 })
 
-
+app.put('/ingestas/consumidos',(request,response)=>{
+    let respuesta;
+    let params=[request.body.isConsumed,request.body.consumed_favourites_id]
+    let sql="UPDATE consumed_favourites SET isConsumed=?  WHERE consumed_favourites_id=?"
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.affectedRows>0){
+                respuesta={error:false, type:1, message: res};
+            }else{
+                respuesta={error:true, type:-1, message: `favorito con id ${request.body.consumed_favourites_id} no encontrado`};
+            }
+        }
+        response.send(respuesta)
+    })
+})
 
 
 
