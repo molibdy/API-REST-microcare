@@ -716,13 +716,10 @@ app.get('/ingredientes/avoid',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    if(request.query.ingredient_id!=null){
-        params=[request.query.ingredient_id]
-        sql=`SELECT * FROM ingredients  WHERE ingredient_id=?`
-    }else{
+  
         sql=`SELECT  avoid_ingredients.ingredient_id, avoid_id, ingredients.ingredient_name FROM avoid_ingredients 
         JOIN ingredients ON ingredients.ingredient_id = avoid_ingredients.ingredient_id`
-    }
+  
     connection.query(sql,params,(err,res)=>{
         if (err){
             respuesta={error:true, type:0, message: err};
@@ -738,37 +735,8 @@ app.get('/ingredientes/avoid',(request,response)=>{
         response.send(respuesta)
     })
 })
-app.get('/ingredientes/allergen',(request,response)=>{
-    console.log("entrando al get de alergias");
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.ingredient_id!=null){
-        params=[request.query.ingredient_id]
-        sql=`SELECT * FROM ingredients  WHERE ingredient_id=?`
-    }else{
-        sql=`SELECT  user_allergen.allergen_id, user_id, allergens.allergen_name FROM user_allergen 
-            JOIN allergens ON allergen.allergen_id = user_allergen.allergen_id`
-    }
-    connection.query(sql,params,(err,res)=>{
-        console.log("entrando al mysq de alergias" + res);
-        console.log(res);
-        console.log(err);
 
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                respuesta={error:true, code:200, type:-1, message: res};
 
-            }
-        }
-        response.send(respuesta)
-    })
-})
 ///// query para sacar los ingredientes ricos en micronutrientes
 app.get('/ingredientes/micronutrientes',(request,response)=>{
     let respuesta;
@@ -799,28 +767,46 @@ app.get('/ingredientes/micronutrientes',(request,response)=>{
         response.send(respuesta)
     })
 })
-app.get('/ingredientes/all_allergen',(request,response)=>{
+app.get('/ingredientes/allergen',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-    if(request.query.allergic!=null){
-        params=[request.query.allergic]
-        sql=`SELECT * FROM allergens  WHERE allergen_id=?`
-    }else{
+    
         sql=`SELECT  * FROM allergens`
-    }
+  
     connection.query(sql,params,(err,res)=>{
         if (err){
             respuesta={error:true, type:0, message: err};
         }
         else{
-            respuesta = res
+            respuesta = {error:false, type:1, message: res};
 
         }
     
     response.send(respuesta)
+    })
 })
+
+app.get('/ingredientes/dietas',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+    
+        sql=`SELECT  * FROM diets`
+  
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            respuesta = {error:false, type:1, message: res};
+
+        }
+    
+    response.send(respuesta)
+    })
 })
+
 
 app.post('/ingredientes',(request,response)=>{
     let respuesta;
@@ -1550,93 +1536,93 @@ app.post('/usuario/registro',(request,response)=>{
 
 })
 
-app.post('/usuario/preferencias',(request,response)=>{
-    console.log('entrada al select usuario/preferencias');
-    let respuesta;
-    let paramsGet= []
-    let paramsPost=[request.body.username,request.body.password,request.body.email];
-    let sqlPrueba = `SELECT * from micronutrients `
-    let sqlPost=`INSERT INTO users (username, password, email) VALUES (?,?,?)`;
-    let sqlGet=`SELECT  diet_ingredient.ingredient_id, allergen_ingredient.ingredient_id FROM diet_ingredient
-    JOIN ingredients ON ingredients.ingredient_id = diet_ingredient.ingredient_id
-    JOIN allergen_ingredient ON allergen_ingredient.ingredient_id=ingredients.ingredient_id
-    WHERE diet_id IN (`
-    for(let i =0; i<request.body.dietas.length; i++){
-        if(i==request.body.dietas.length-1){
-            paramsGet.push(request.body.dietas[i])
-            sqlGet += `?`
-        }else{
-            paramsGet.push(request.body.dietas[i])
-            sqlGet += `?,`
-        }
+// app.post('/usuario/preferencias',(request,response)=>{
+//     console.log('entrada al select usuario/preferencias');
+//     let respuesta;
+//     let paramsGet= []
+//     let paramsPost=[request.body.username,request.body.password,request.body.email];
+//     let sqlPrueba = `SELECT * from micronutrients `
+//     let sqlPost=`INSERT INTO users (username, password, email) VALUES (?,?,?)`;
+//     let sqlGet=`SELECT  diet_ingredient.ingredient_id, allergen_ingredient.ingredient_id FROM diet_ingredient
+//     JOIN ingredients ON ingredients.ingredient_id = diet_ingredient.ingredient_id
+//     JOIN allergen_ingredient ON allergen_ingredient.ingredient_id=ingredients.ingredient_id
+//     WHERE diet_id IN (`
+//     for(let i =0; i<request.body.dietas.length; i++){
+//         if(i==request.body.dietas.length-1){
+//             paramsGet.push(request.body.dietas[i])
+//             sqlGet += `?`
+//         }else{
+//             paramsGet.push(request.body.dietas[i])
+//             sqlGet += `?,`
+//         }
         
-    } sqlGet += `) OR allergen_id IN (`
-    for(let i =0; i<request.body.alergenos.length; i++){
-        if(i==request.body.alergenos.length-1){
-            paramsGet.push(request.body.alergenos[i])
-            sqlGet += `?`
-        }else{
-            paramsGet.push(request.body.alergenos[i])
-            sqlGet += `?,`
-        }
-    }            sqlGet += `)`
+//     } sqlGet += `) OR allergen_id IN (`
+//     for(let i =0; i<request.body.alergenos.length; i++){
+//         if(i==request.body.alergenos.length-1){
+//             paramsGet.push(request.body.alergenos[i])
+//             sqlGet += `?`
+//         }else{
+//             paramsGet.push(request.body.alergenos[i])
+//             sqlGet += `?,`
+//         }
+//     }            sqlGet += `)`
 
 
-    connection.query(sqlGet,paramsGet,(err,res)=>{
-        console.log('entrada al post usuario/preferencias');
+//     connection.query(sqlGet,paramsGet,(err,res)=>{
+//         console.log('entrada al post usuario/preferencias');
 
-        if(err){
-            console.log(err);
-            respuesta={error:true, type:0, message: err};
-        }
-        else{ 
-            if(res.length>0){
-                respuesta={error:false, code:200, type:3, message: res};     
-            }
-            else{
-                respuesta={error:false, code:200, type:2, message: res};
-                console.log(res);
-                let sql2 = `INSERT INTO avoid_ingredients (user_id, ingredient_id) VALUES`
-                params2=[]
-                    for(let i=0;i<request.body.ingredientes.length;i++){
-                        params2.push(request.body.user_id,request.body.ingredientes[i])
-                        sql=+ `(?,?),`
-                    }
-                    for(let i=0;i<res.length;i++){
-                        params2.push(request.body.user_id,res[i])
-                        if(i==res.length-1){
-                            sql=+ `(?,?)`
-                        }else{
-                            sql=+ `(?,?),`
-                        }  
-                    }
+//         if(err){
+//             console.log(err);
+//             respuesta={error:true, type:0, message: err};
+//         }
+//         else{ 
+//             if(res.length>0){
+//                 respuesta={error:false, code:200, type:3, message: res};     
+//             }
+//             else{
+//                 respuesta={error:false, code:200, type:2, message: res};
+//                 console.log(res);
+//                 let sql2 = `INSERT INTO avoid_ingredients (user_id, ingredient_id) VALUES`
+//                 params2=[]
+//                     for(let i=0;i<request.body.ingredientes.length;i++){
+//                         params2.push(request.body.user_id,request.body.ingredientes[i])
+//                         sql=+ `(?,?),`
+//                     }
+//                     for(let i=0;i<res.length;i++){
+//                         params2.push(request.body.user_id,res[i])
+//                         if(i==res.length-1){
+//                             sql=+ `(?,?)`
+//                         }else{
+//                             sql=+ `(?,?),`
+//                         }  
+//                     }
 
-            connection.query(sql2,params2,(negativo,positivo)=>{
-                    if (negativo){
+//             connection.query(sql2,params2,(negativo,positivo)=>{
+//                     if (negativo){
                     
-                        console.log(negativo)
-                    }
-                    else{
-                        console.log(positivo)
-                        if(positivo.affectedRows>0){
-                            respuesta={error:false, type:1, message: `Usuario añadido correctamente con id ${positivo.insertId}`};
-                        }
-                        else{
-                            respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
-                        }
-                    }
-                    console.log(respuesta)
-                    response.send(respuesta)
+//                         console.log(negativo)
+//                     }
+//                     else{
+//                         console.log(positivo)
+//                         if(positivo.affectedRows>0){
+//                             respuesta={error:false, type:1, message: `Usuario añadido correctamente con id ${positivo.insertId}`};
+//                         }
+//                         else{
+//                             respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
+//                         }
+//                     }
+//                     console.log(respuesta)
+//                     response.send(respuesta)
 
-                })  
-            }
-        } 
-    })
+//                 })  
+//             }
+//         } 
+//     })
 
         
     
 
-})
+// })
 
 
 
@@ -1664,6 +1650,165 @@ app.post('/usuario/login',(request,response)=>{
     })
 })
 
+
+
+app.get('/usuario/preferencias',(request,response)=>{
+    let preferencias={
+        dietas:[{diet_id:0, diet_name:''}], 
+        alergenos:[{allergen_id:0,allergen_name:''}],
+        ingredientes:[{ingredient_id:0,ingredient_name:''}]
+    }
+    let respuesta;
+    let params= [request.query.user_id]
+   
+    let sql=`SELECT diet_name, diets.diet_id  
+    FROM diets 
+    JOIN user_diet ON user_diet.diet_id=diets.diet_id
+    WHERE user_diet.user_id=? `
+
+    connection.query(sql,params,(err,dietas)=>{
+        if (err){
+            console.log('error en get preferencias'); console.log(err)
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(dietas.length>0){
+                for(let i=0;i<dietas.length;i++){
+                    if(!preferencias.dietas.some((dieta)=>{
+                        return dieta.diet_id==dietas[i].diet_id
+                    })){
+                        if(preferencias.dietas[0].diet_id==0){
+                            preferencias.dietas[0]={diet_id:dietas[i].diet_id, diet_name:dietas[i].diet_name}
+                        }else{
+                            preferencias.dietas.push({diet_id:dietas[i].diet_id, diet_name:dietas[i].diet_name})
+                        }
+                    }
+                }
+            }else{
+                preferencias.dietas=[]
+            }
+
+            let sql2=`SELECT allergen_name, allergens.allergen_id  
+            FROM allergens 
+            JOIN user_allergen ON user_allergen.allergen_id=allergens.allergen_id
+            WHERE user_allergen.user_id=? `
+
+            connection.query(sql2,params,(err,alergenos)=>{
+                if (err){
+                    console.log('error en get preferencias'); console.log(err)
+                    respuesta={error:true, type:0, message: err};
+                }
+                else{
+                    if(alergenos.length>0){
+                        for(let i=0;i<alergenos.length;i++){
+                            if(!preferencias.alergenos.some((alergeno)=>{
+                                return alergeno.allergen_id==alergenos[i].allergen_id
+                            })){
+                                if(preferencias.alergenos[0].allergen_id==0){
+                                    preferencias.alergenos[0]={allergen_id:alergenos[i].allergen_id, allergen_name:alergenos[i].allergen_name}
+                                }else{
+                                    preferencias.alergenos.push({allergen_id:alergenos[i].allergen_id, allergen_name:alergenos[i].allergen_name})
+                                }
+                            }
+                        }
+                    }else{
+                        preferencias.alergenos=[]
+                    }
+
+                    let sql3=`SELECT ingredient_name, ingredients.ingredient_id  
+                    FROM ingredients 
+                    JOIN avoid_ingredients ON avoid_ingredients.ingredient_id=ingredients.ingredient_id
+                    WHERE avoid_ingredients.user_id=? `
+
+                    connection.query(sql3,params,(err,ingredientes)=>{
+                        if (err){
+                            console.log('error en get preferencias'); console.log(err)
+                            respuesta={error:true, type:0, message: err};
+                        }
+                        else{
+                            if(ingredientes.length>0){
+                                for(let i=0;i<ingredientes.length;i++){
+                                    if(!preferencias.ingredientes.some((ingrediente)=>{
+                                        return ingrediente.ingredient_id==ingredientes[i].ingredient_id
+                                    })){
+                                        if(preferencias.ingredientes[0].ingredient_id==0){
+                                            preferencias.ingredientes[0]={ingredient_id:ingredientes[i].ingredient_id, ingredient_name:ingredientes[i].ingredient_name}
+                                        }else{
+                                            preferencias.ingredientes.push({ingredient_id:ingredientes[i].ingredient_id, ingredient_name:ingredientes[i].ingredient_name})
+                                        }
+                                    }
+                                }
+                            }else{
+                                preferencias.ingredientes=[]
+                            }
+                        }
+                        respuesta={error:true, code:200, type:1, message: preferencias};
+                        console.log(preferencias)
+                        console.log(request.query.user_id)
+                        response.send(respuesta)
+                    })
+                }
+            })
+
+        }
+        
+    })
+})
+
+
+
+
+app.post('/usuario/preferencias',(request,response)=>{
+    let respuesta;
+    let params=[request.body.user_id, request.body.preferencia_id];
+    let sql;
+    if(request.body.ruta=='dietas'){
+        sql=`INSERT INTO user_diet (user_id,diet_id) VALUES (?,?)`;
+    }else if(request.body.ruta=='alergenos'){
+        sql=`INSERT INTO user_allergen (user_id,allergen_id) VALUES (?,?)`;
+    }else if(request.body.ruta=='avoidIngredients'){
+        sql=`INSERT INTO avoid_ingredients (user_id,ingredient_id) VALUES (?,?)`;
+    }
+        connection.query(sql,params,(err,res)=>{
+           
+            if (err){   
+                console.log(err)
+                respuesta={error:true, type:0, message:err};
+            }
+            else{
+                console.log('post de preferencias:');    console.log(res)
+                respuesta={error:false, type:1, message: res.insertId};
+            }
+            response.send(respuesta);
+        })
+})
+
+
+
+app.delete('/usuario/preferencias',(request,response)=>{
+    let respuesta;
+    let params=[request.query.user_id, request.query.preferencia_id];
+    let sql;
+    if(request.query.ruta=='dietas'){
+        sql=`DELETE FROM user_diet WHERE user_id=? AND diet_id=?`;
+    }else if(request.query.ruta=='alergenos'){
+        sql=`DELETE FROM user_allergen WHERE user_id=? AND allergen_id=?`;
+    }else if(request.query.ruta=='avoidIngredients'){
+        sql=`DELETE FROM avoid_ingredients WHERE user_id=? AND ingredient_id=?`;
+    }
+        connection.query(sql,params,(err,res)=>{
+            console.log(sql)
+            if (err){   
+                console.log(err)
+                respuesta={error:true, type:0, message:err};
+            }
+            else{
+                console.log(res)
+                respuesta={error:false, type:1, message: `preferencia con id ${request.query.preferencia_id} eliminado correctamente`};
+            }
+            response.send(respuesta);
+        })
+})
 
 
 
