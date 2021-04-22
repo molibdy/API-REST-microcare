@@ -137,33 +137,36 @@ app.get('/recetas/detalles',(request,response)=>{
     let sql;
     if(request.query.recipe_id!=null){
         params=[request.query.recipe_id]
-        sql=`SELECT recipe_ingredient.recipe_id, diets.diet_name, ingredients.ingredient_name, recipe_ingredient.total_grams, 
-        recipe_ingredient.amount, recipe_ingredient.unit, recipe_ingredient.ingredient_id FROM recipe_ingredient 
+        sql=`SELECT recipe_ingredient.recipe_id, recipe_ingredient.total_grams, recipe_ingredient.amount,
+		recipe_ingredient.ingredient_id, ingredients.ingredient_name, diet_name, allergen_name FROM recipe_ingredient 
         JOIN ingredients ON ingredients.ingredient_id=recipe_ingredient.ingredient_id
-        JOIN diet_recipe ON diet_recipe.recipe_id=recipe_ingredient.recipe_id
-        JOIN diets ON diet_recipe.diet_id=diets.diet_id
-        WHERE recipe.ingredient.recipe_id=?`
+        LEFT JOIN diet_recipe ON diet_recipe.recipe_id=recipe_ingredient.recipe_id
+        LEFT JOIN diets ON diet_recipe.diet_id=diets.diet_id
+        LEFT JOIN allergen_ingredient ON allergen_ingredient.ingredient_id=recipe_ingredient.ingredient_id
+        LEFT JOIN allergens ON allergens.allergen_id=allergen_ingredient.allergen_id
+        WHERE recipe_ingredient.recipe_id=?`
+        console.log('detalles con id')
     }else{
-        sql=`SELECT recipe_ingredient.recipe_id, diets.diet_name, ingredients.ingredient_name, recipe_ingredient.total_grams, 
-        recipe_ingredient.amount, recipe_ingredient.unit, recipe_ingredient.ingredient_id FROM recipe_ingredient 
+        sql=`SELECT recipe_ingredient.recipe_id, recipe_ingredient.total_grams, recipe_ingredient.amount,
+		recipe_ingredient.ingredient_id, ingredients.ingredient_name, diet_name FROM recipe_ingredient 
         JOIN ingredients ON ingredients.ingredient_id=recipe_ingredient.ingredient_id
-        JOIN diet_recipe ON diet_recipe.recipe_id=recipe_ingredient.recipe_id
-        JOIN diets ON diet_recipe.diet_id=diets.diet_id
+        LEFT JOIN diet_recipe ON diet_recipe.recipe_id=recipe_ingredient.recipe_id
+        LEFT JOIN diets ON diet_recipe.diet_id=diets.diet_id
         ORDER BY recipe_id`
     }
     connection.query(sql,params,(err,res)=>{
         if (err){
             respuesta={error:true, type:0, message: err};
         }
-        else{
+        else{console.log('getting detalles')
             if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
+                respuesta={error:false, code:200, type:1, message: res};
             }else{
-                respuesta={error:true, code:200, type:-1, message: res};
-               
+                respuesta={error:false, code:200, type:-1, message: res};  
             } 
         }
         response.send(respuesta)
+      
     })
 })
 
@@ -172,19 +175,35 @@ app.get('/recetas/parati',(request,response)=>{
     let respuesta;
     let params;
     let sql;
-        params=[request.query.user_id, request.query.user_id, request.query.date]
+   
+        params=[request.query.user_id, request.query.user_id, request.query.user_id, request.query.user_id, request.query.date]
         sql=`SELECT DISTINCT recetas.recipe_id 
         FROM (
             SELECT recipe_ingredient.recipe_id AS recipe_id, ingredient_micronutrient.micronutrient_id as micronutrient_id,
             SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
             FROM ingredient_micronutrient
             JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
-            WHERE recipe_ingredient.ingredient_id NOT IN (
-                SELECT * FROM (
-                    SELECT avoid_ingredients.ingredient_id FROM avoid_ingredients
-                    WHERE avoid_ingredients.user_id=?
-                    ) AS avoid_these
-                )
+            WHERE recipe_id NOT IN(
+				SELECT recipe_id FROM recipe_ingredient
+				WHERE ingredient_id IN (
+					SELECT * FROM (
+						SELECT ingredient_id FROM avoid_ingredients
+						WHERE user_id=?
+					) AS avoid_these
+				) OR ingredient_id IN (
+					 SELECT * FROM (
+						SELECT ingredient_id FROM diet_ingredient
+						JOIN user_diet ON user_diet.diet_id=diet_ingredient.diet_id
+						WHERE user_id=?
+					) AS avoid_diets
+				) OR ingredient_id IN (
+					 SELECT * FROM (
+						SELECT ingredient_id FROM allergen_ingredient
+						JOIN user_allergen ON user_allergen.allergen_id=allergen_ingredient.allergen_id
+						WHERE user_id=?
+					) AS avoid_allergens
+				)
+			)
             AND micronutrient_id IN (
                 SELECT * FROM (
                     SELECT progress.micronutrient_id FROM progress
@@ -808,148 +827,138 @@ app.get('/ingredientes/dietas',(request,response)=>{
 })
 
 
-app.post('/ingredientes',(request,response)=>{
-    let respuesta;
-    let params=[request.body.ingredient_name];
-    let sql=`INSERT INTO ingredients (ingredient_name) VALUES (?)`;
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            if (err.errno==1048){
-                respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
-            }else  if (err.errno==1366){
-                respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
-            }else{
-                respuesta={error:true, type:0, message: err};
-            }
-        }
-        else{
-            if(res.affectedRows>0){
-                respuesta={error:false, type:1, message: `ingrediente añadido correctamente con id ${res.insertId}`};
-            }
-            else{
-                respuesta={error:true, type:2, message: `El ingrediente no se ha podido añadir a la base de datos`};
-            }
-        }
-        response.send(respuesta)
-    })
-})
+// app.post('/ingredientes',(request,response)=>{
+//     let respuesta;
+//     let params=[request.body.ingredient_name];
+//     let sql=`INSERT INTO ingredients (ingredient_name) VALUES (?)`;
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             if (err.errno==1048){
+//                 respuesta={error:true, type:-2, message:'faltan campos por rellenar'}
+//             }else  if (err.errno==1366){
+//                 respuesta={error:true, type:-1, message:`el valor introducido para uno de los campos no es correcto`, detalle: err.sqlMessage}
+//             }else{
+//                 respuesta={error:true, type:0, message: err};
+//             }
+//         }
+//         else{
+//             if(res.affectedRows>0){
+//                 respuesta={error:false, type:1, message: `ingrediente añadido correctamente con id ${res.insertId}`};
+//             }
+//             else{
+//                 respuesta={error:true, type:2, message: `El ingrediente no se ha podido añadir a la base de datos`};
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
 
-app.post('/ingredientes/avoid',(request,response)=>{
-    let respuesta;
-    let paramsGet= [request.body.user_id]
+// app.post('/ingredientes/avoid',(request,response)=>{
+//     let respuesta;
+//     let paramsGet= [request.body.user_id]
     
-    let sqlDelete=`DELETE from avoid_ingredients WHERE user_id = ?`;
+//     let sqlDelete=`DELETE from avoid_ingredients WHERE user_id = ?`;
 
-    connection.query(sqlDelete,paramsGet,(err,res)=>{
+//     connection.query(sqlDelete,paramsGet,(err,res)=>{
 
-        if(err){
-            console.log('error en post ingredientes/avoid')
-            respuesta={error:true, type:0, message: err};
-            response.send(respuesta)
+//         if(err){
+//             console.log('error en post ingredientes/avoid')
+//             respuesta={error:true, type:0, message: err};
+//             response.send(respuesta)
 
-        }
-        else{ 
-                console.log(res);
-                let sql2 = `INSERT INTO avoid_ingredients (user_id, ingredient_id) VALUES `
-                params2=[]
-                    for(let i=0;i<request.body.ingredientes.length;i++){
-                        params2.push(request.body.user_id,request.body.ingredientes[i].ingredient_id)
+//         }
+//         else{ 
+//                 let sql2 = `INSERT INTO avoid_ingredients (user_id, ingredient_id) VALUES `
+//                 params2=[]
+//                     for(let i=0;i<request.body.ingredientes.length;i++){
+//                         params2.push(request.body.user_id,request.body.ingredientes[i].ingredient_id)
 
-                        if(i==request.body.ingredientes.length-1){
-                            sql2 += `(?,?)`
-                        }else{
-                            sql2 += `(?,?),`
-                        }  
-                    }
+//                         if(i==request.body.ingredientes.length-1){
+//                             sql2 += `(?,?)`
+//                         }else{
+//                             sql2 += `(?,?),`
+//                         }  
+//                     }
 
 
-            connection.query(sql2,params2,(negativo,positivo)=>{
+//             connection.query(sql2,params2,(negativo,positivo)=>{
 
-                    if (negativo){
-                        console.log('error en post ingredientes/avoid')
-                    }
-                    else{
-                        if(positivo.affectedRows>0){
-                            respuesta={error:false, type:1, message: positivo};
-                        }
-                        else{
-                            respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
-                        }
-                    }
-                    response.send(respuesta)
-            })  
+//                     if (negativo){
+//                         console.log('error en post ingredientes/avoid')
+//                     }
+//                     else{
+//                         if(positivo.affectedRows>0){
+//                             respuesta={error:false, type:1, message: positivo};
+//                         }
+//                         else{
+//                             respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
+//                         }
+//                     }
+//                     response.send(respuesta)
+//             })  
                 
                 
             
-        } 
-    })
+//         } 
+//     })
 
-})
+// })
 
-app.post('/ingredientes/allergen',(request,response)=>{
-    console.log('entrada al post de alergenos');
-    let respuesta;
-    let paramsGet= [request.body.user_id]
+// app.post('/ingredientes/allergen',(request,response)=>{
+//     let respuesta;
+//     let paramsGet= [request.body.user_id]
     
-    let sqlDelete=`DELETE from user_allergen WHERE user_id = ?`;
+//     let sqlDelete=`DELETE from user_allergen WHERE user_id = ?`;
 
-    connection.query(sqlDelete,paramsGet,(err,res)=>{
-        console.log('entrada al mysql de alergenos');
+//     connection.query(sqlDelete,paramsGet,(err,res)=>{
 
-        if(err){
-            console.log(err);
-            respuesta={error:true, type:0, message: err};
-            response.send(respuesta)
+//         if(err){
+//             console.log(err);
+//             respuesta={error:true, type:0, message: err};
+//             response.send(respuesta)
 
-        }
-        else{ 
-                console.log(res);
-                if(request.body.alergias.length>0){
-                    let sql2 = `INSERT INTO user_allergen (user_id, allergen_id) VALUES `
-                    params2=[]
-                    console.log(request.body.alergias);
-                        for(let i=0;i<request.body.alergias.length;i++){
-                            params2.push(request.body.user_id,request.body.alergias[i].allergen_id)
-                            console.log(request.body.alergias[i].allergen_id);
+//         }
+//         else{ 
+//                 if(request.body.alergias.length>0){
+//                     let sql2 = `INSERT INTO user_allergen (user_id, allergen_id) VALUES `
+//                     params2=[]
+//                     console.log(request.body.alergias);
+//                         for(let i=0;i<request.body.alergias.length;i++){
+//                             params2.push(request.body.user_id,request.body.alergias[i].allergen_id)
 
-                            if(i==request.body.alergias.length-1){
-                                sql2 += `(?,?)`
-                            }else{
-                                sql2 += `(?,?),`
-                            }  
-                        }
-                        console.log(sql2);
+//                             if(i==request.body.alergias.length-1){
+//                                 sql2 += `(?,?)`
+//                             }else{
+//                                 sql2 += `(?,?),`
+//                             }  
+//                         }
 
-                    connection.query(sql2,params2,(negativo,positivo)=>{
-                        console.log(params2.ingredientes);
+//                     connection.query(sql2,params2,(negativo,positivo)=>{
+//                         console.log(params2.ingredientes);
 
-                            if (negativo){
-                            console.log('negativo');
-                                console.log(negativo)
-                            }
-                            else{
-                                console.log(positivo)
-                                console.log('positivo')
-                                if(positivo.affectedRows>0){
-                                    respuesta={error:false, type:1, message: positivo};
-                                }
-                                else{
-                                    respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
-                                }
-                            }
-                            console.log(respuesta)
-
-                    })  
-                }
-                else{
-                    response.send(res)
+//                             if (negativo){
+//                             console.log('negativo');
+//                                 console.log(negativo)
+//                             }
+//                             else{
+//                                 if(positivo.affectedRows>0){
+//                                     respuesta={error:false, type:1, message: positivo};
+//                                 }
+//                                 else{
+//                                     respuesta={error:true, type:2, message: `El Usuario no se ha podido añadir a la base de datos`};
+//                                 }
+//                             }
+//                     })  
+//                 }
+//                 else{
+//                     response.send(res)
                 
-                }    
+//                 }    
             
-            } 
-    })
+//             } 
+//     })
 
-})
+// })
 
 
 
@@ -1081,34 +1090,34 @@ app.delete('/ingredientes',(request,response)=>{
 
 ///////// TABLA INTAKES
 
-app.get('/ingestas',(request,response)=>{
-    let respuesta;
-    let params;
-    let sql;
-    if(request.query.intake_id!=null){
-        params=[request.query.intake_id]
-        sql=`SELECT * FROM intakes  WHERE intake_id=?`
-    }else{
-        sql=`SELECT * FROM intakes`
-    }
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.length>0){
-                respuesta={error:true, code:200, type:1, message: res};
-            }else{
-                if(request.query.challenge_id!=null){
-                    respuesta={error:true, code:200, type:-1, message: `No existe un intake con id ${request.query.challenge_id}`};
-                }else{
-                    respuesta={error:true, code:200, type:-2, message: `No hay intakes en la base de datos`};
-                }
-            }
-        }
-        response.send(respuesta)
-    })
-})
+// app.get('/ingestas',(request,response)=>{
+//     let respuesta;
+//     let params;
+//     let sql;
+//     if(request.query.intake_id!=null){
+//         params=[request.query.intake_id]
+//         sql=`SELECT * FROM intakes  WHERE intake_id=?`
+//     }else{
+//         sql=`SELECT * FROM intakes`
+//     }
+//     connection.query(sql,params,(err,res)=>{
+//         if (err){
+//             respuesta={error:true, type:0, message: err};
+//         }
+//         else{
+//             if(res.length>0){
+//                 respuesta={error:true, code:200, type:1, message: res};
+//             }else{
+//                 if(request.query.challenge_id!=null){
+//                     respuesta={error:true, code:200, type:-1, message: `No existe un intake con id ${request.query.challenge_id}`};
+//                 }else{
+//                     respuesta={error:true, code:200, type:-2, message: `No hay intakes en la base de datos`};
+//                 }
+//             }
+//         }
+//         response.send(respuesta)
+//     })
+// })
 
 
 
@@ -1249,32 +1258,115 @@ app.put('/ingestas',(request,response)=>{
 })
 
 
-app.delete('/ingestas',(request,response)=>{
-    let respuesta;
-    if(request.body.intake_id!=null){
-        let params=[request.body.intake_id];
-        let sql=`DELETE FROM intakes WHERE intake_id=?`;
-        connection.query(sql,params,(err,res)=>{
-            if (err){   
-                respuesta={error:true, type:0, message:err};
-            }
-            else{
-                if(res.affectedRows>0){
-                    respuesta={error:false, type:1, message: `intake con id ${request.body.intake_id} eliminado correctamente`};
-                }
-                else{
-                    respuesta={error:true, type:-1, message: `intake con id ${request.body.intake_id} no encontrado`};
-                }
-            }
-            response.send(respuesta);
-        })
-    }else{
-        respuesta={error:true, type:-2, message: `id de intake no especificado`};
-        response.send(respuesta);
-    }
-})
+// app.delete('/ingestas',(request,response)=>{
+//     let respuesta;
+//     if(request.body.intake_id!=null){
+//         let params=[request.body.intake_id];
+//         let sql=`DELETE FROM intakes WHERE intake_id=?`;
+//         connection.query(sql,params,(err,res)=>{
+//             if (err){   
+//                 respuesta={error:true, type:0, message:err};
+//             }
+//             else{
+//                 if(res.affectedRows>0){
+//                     respuesta={error:false, type:1, message: `intake con id ${request.body.intake_id} eliminado correctamente`};
+//                 }
+//                 else{
+//                     respuesta={error:true, type:-1, message: `intake con id ${request.body.intake_id} no encontrado`};
+//                 }
+//             }
+//             response.send(respuesta);
+//         })
+//     }else{
+//         respuesta={error:true, type:-2, message: `id de intake no especificado`};
+//         response.send(respuesta);
+//     }
+// })
 
  //////////// ingestas / favoritos 
+
+
+ app.get('/ingestas',(request,response)=>{
+     console.log('getting Ingestas')
+    let respuesta;
+    let params;
+    let sql;
+        params=[request.query.user_id, request.query.date]
+        sql=`SELECT intake_ingredient.intake_id AS intake_id, ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
+        micronutrients.micronutrient_name AS micronutrient_name, intakes.date AS date,
+        micronutrients.acronym AS acronym,
+        micronutrient_groups.color AS color,
+        micronutrient_groups.group_id AS group_id,
+        SUM(ingredient_micronutrient.micronutrient_percent*intake_ingredient.grams/ingredient_micronutrient.grams) AS percent
+        FROM ingredient_micronutrient
+        JOIN intake_ingredient ON intake_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+        JOIN micronutrients ON micronutrients.micronutrient_id=ingredient_micronutrient.micronutrient_id
+        JOIN micronutrient_groups ON micronutrient_groups.group_id=micronutrients.group_id
+        JOIN intakes ON intakes.intake_id = intake_ingredient.intake_id
+        WHERE intakes.user_id = ? AND date=?
+        GROUP BY intake_id, micronutrient_id
+        ORDER BY intake_id, percent DESC`
+        let arringestas = [{intake_id: 0, date:'', microscore: []}]
+        connection.query(sql,params,(err,ingestas)=>{
+            if (err){
+                respuesta={error:true, type:0, message: err};
+            }
+            else{
+                
+                if(ingestas.length>0){
+              
+                    for(let i=0; i<ingestas.length;i++){
+                        
+                        if(ingestas[i].intake_id == arringestas[arringestas.length -1].intake_id){
+                            arringestas[arringestas.length -1].microscore.push({micronutrient_id: ingestas[i].micronutrient_id, 
+                                                                                micronutrient_name: ingestas[i].micronutrient_name,
+                                                                                acronym: ingestas[i].acronym,
+                                                                                color: ingestas[i].color,
+                                                                                percent: ingestas[i].percent,
+                                                                                group_id: ingestas[i].group_id})
+    
+                        }else{
+                            if(arringestas[0].intake_id==0){
+                                arringestas[0] = { intake_id: ingestas[i].intake_id, date: ingestas[i].date, microscore: []}
+                            }
+                            else{ arringestas.push({ intake_id: ingestas[i].intake_id, date: ingestas[i].date, microscore: []})
+                            }
+    
+                           
+                        }                
+    
+                    }              console.log('arringestas');           console.log(arringestas);
+    
+    
+                    respuesta={error:true, code:200, type:1, message: arringestas};
+                    
+                }
+            }
+            response.send(respuesta)
+            console.log(respuesta)
+        })
+})
+
+
+
+app.delete('/ingestas',(request,response)=>{
+    let respuesta;
+   
+    let params=[request.query.intake_id];
+    let sql=`DELETE FROM intakes WHERE intake_id = ?`;
+    connection.query(sql,params,(err,res)=>{
+    
+        if (err){   
+            respuesta={error:true, type:0, message:err};
+        }
+        else{
+            respuesta={error:false, type:1, message: `intake con id ${request.query.intake_id} eliminado correctamente`};
+        }
+        response.send(respuesta);
+    })
+})
+
+
  
  app.post('/ingestas/favoritos',(request,response)=>{
      console.log('entrando a post ingestas/favoritos')
@@ -1302,29 +1394,7 @@ app.delete('/ingestas',(request,response)=>{
     })
 
 })
-app.post('/ingestas/consumidos', (request,response) =>{
 
-    let respuesta;
-
-    let params=[request.body.user_id,request.body.date,request.body.favourite_id, request.body.isConsumed];
-    let sql='INSERT INTO consumed_favourites (user_id,date,favourite_id,isConsumed) VALUES (?,?,?,?)';
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-            console.log('err de post recetas planeadas')
-            console.log(err)
-        }
-        else{
-            if(res.affectedRows>0){
-                respuesta={error:false, code:200, type:1, message: res.insertId};
-            }
-            else{
-                respuesta={error:true, code:200, message: `Receta no se ha podido añadir a la base de datos`};
-            }
-        }
-        response.send(respuesta)
-    })
-})
 
 app.get('/ingestas/favoritos',(request,response)=>{
     let respuesta;
@@ -1358,7 +1428,7 @@ app.get('/ingestas/favoritos',(request,response)=>{
                 for(let i=0; i<favoritos.length;i++){
                     
                     if(favoritos[i].favourite_id == arrFavoritos[arrFavoritos.length -1].favourite_id){
-                        console.log('if ' + i);
+          
                         arrFavoritos[arrFavoritos.length -1].microscore.push({micronutrient_id: favoritos[i].micronutrient_id, 
                                                                             micronutrient_name: favoritos[i].micronutrient_name,
                                                                             acronym: favoritos[i].acronym,
@@ -1368,7 +1438,7 @@ app.get('/ingestas/favoritos',(request,response)=>{
 
                     }else{
                         if(arrFavoritos[0].favourite_id==0){
-                            console.log('else ' + i);
+            
                             arrFavoritos[0] = {favourite_id: favoritos[i].favourite_id, intake_id: favoritos[i].intake_id, name: favoritos[i].name, microscore: []}
                         }
                         else{ arrFavoritos.push({favourite_id: favoritos[i].favourite_id, intake_id: favoritos[i].intake_id, name: favoritos[i].name, microscore: []})
@@ -1377,7 +1447,7 @@ app.get('/ingestas/favoritos',(request,response)=>{
                        
                     }                
 
-                }              console.log('arrFavoritos');           console.log(arrFavoritos);
+                }              console.log('arrFavoritos');     
 
 
                 respuesta={error:true, code:200, type:1, message: arrFavoritos};
@@ -1416,7 +1486,80 @@ app.delete('/ingestas/favorito',(request,response)=>{
 })
 
 
+app.get('/ingestas/consumidos',(request,response)=>{
+    let respuesta;
+    let params;
+    let sql;
+        params=[request.query.user_id, request.query.date]
+        sql=`SELECT consumed_favourites.consumed_favourites_id, consumed_favourites.date, consumed_favourites.favourite_id, 
+        consumed_favourites.isConsumed, favourites.name 
+        FROM consumed_favourites
+        JOIN favourites ON favourites.favourite_id=consumed_favourites.favourite_id
+        WHERE consumed_favourites.user_id=? AND date=?`
 
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+            console.log(err)
+        }
+        else{
+            if(res.length>0){
+                respuesta={error:true, code:200, type:1, message: res};
+            }else{
+                respuesta={error:true, code:200, type:-1, message: res};
+               
+            } 
+        }
+        response.send(respuesta)
+        
+    })
+})
+
+
+
+app.post('/ingestas/consumidos', (request,response) =>{
+
+    let respuesta;
+
+    let params=[request.body.user_id,request.body.date,request.body.favourite_id, request.body.isConsumed];
+    let sql='INSERT INTO consumed_favourites (user_id,date,favourite_id,isConsumed) VALUES (?,?,?,?)';
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+            console.log(err)
+        }
+        else{
+            if(res.affectedRows>0){
+                respuesta={error:false, code:200, type:1, message: res.insertId};
+            }
+            else{
+                respuesta={error:true, code:200, message: `Receta no se ha podido añadir a la base de datos`};
+            }
+        }
+        response.send(respuesta)
+    })
+})
+
+
+
+app.put('/ingestas/consumidos',(request,response)=>{
+    let respuesta;
+    let params=[request.body.isConsumed,request.body.consumed_favourites_id]
+    let sql="UPDATE consumed_favourites SET isConsumed=?  WHERE consumed_favourites_id=?"
+    connection.query(sql,params,(err,res)=>{
+        if (err){
+            respuesta={error:true, type:0, message: err};
+        }
+        else{
+            if(res.affectedRows>0){
+                respuesta={error:false, type:1, message: res};
+            }else{
+                respuesta={error:true, type:-1, message: `favorito con id ${request.body.consumed_favourites_id} no encontrado`};
+            }
+        }
+        response.send(respuesta)
+    })
+})
 
 
 
@@ -1840,24 +1983,7 @@ app.put('/usuario/config',(request,response)=>{
   
 })
 
-app.put('/ingestas/consumidos',(request,response)=>{
-    let respuesta;
-    let params=[request.body.isConsumed,request.body.consumed_favourites_id]
-    let sql="UPDATE consumed_favourites SET isConsumed=?  WHERE consumed_favourites_id=?"
-    connection.query(sql,params,(err,res)=>{
-        if (err){
-            respuesta={error:true, type:0, message: err};
-        }
-        else{
-            if(res.affectedRows>0){
-                respuesta={error:false, type:1, message: res};
-            }else{
-                respuesta={error:true, type:-1, message: `favorito con id ${request.body.consumed_favourites_id} no encontrado`};
-            }
-        }
-        response.send(respuesta)
-    })
-})
+
 
 
 
