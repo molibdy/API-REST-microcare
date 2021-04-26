@@ -169,7 +169,7 @@ app.get('/recetas/parati',(request,response)=>{
     let params;
     let sql;
    
-        params=[request.query.user_id, request.query.user_id, request.query.user_id, request.query.user_id, request.query.date]
+        params=[request.query.user_id, request.query.user_id, request.query.user_id, request.query.user_id]
         sql=`SELECT DISTINCT recetas.recipe_id 
         FROM (
             SELECT recipe_ingredient.recipe_id AS recipe_id, ingredient_micronutrient.micronutrient_id as micronutrient_id,
@@ -200,8 +200,8 @@ app.get('/recetas/parati',(request,response)=>{
             AND micronutrient_id IN (
                 SELECT * FROM (
                     SELECT progress.micronutrient_id FROM progress
-                    WHERE progress.user_id=? AND progress.date=?
-                    ORDER BY progress.percent ASC
+                    WHERE progress.user_id=?
+                    ORDER BY progress.date DESC, progress.percent ASC
                     LIMIT 10) AS lowest_progress
                 )    
             GROUP BY recipe_id, micronutrient_id
