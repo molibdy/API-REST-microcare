@@ -756,10 +756,10 @@ app.get('/ingredientes/micronutrientes',(request,response)=>{
     let sql;
     if(request.query.micronutrient_id!=null){
         params=[request.query.micronutrient_id]
-        sql=`SELECT ingredients.ingredient_id, ingredient_name FROM ingredient_micronutrient 
+        sql=`SELECT ingredient_micronutrient.ingredient_id, ingredient_name FROM ingredient_micronutrient 
         JOIN ingredients ON ingredients.ingredient_id = ingredient_micronutrient.ingredient_id
         WHERE micronutrient_id=? ORDER BY micronutrient_percent
-        LIMIT 12`
+        LIMIT 9`
     }
     connection.query(sql,params,(err,res)=>{
         if (err){
