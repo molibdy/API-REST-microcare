@@ -2,9 +2,9 @@
   "name": "api-rest-microcare",
   "version": "1.0.0",
   "description": "",
-  "main": "ApiRestMicrocare.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node ApiRestMicrocare.js",
+    "start": "node src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

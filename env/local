@@ -1,0 +1,5 @@
+HOST= dbHost
+NAME= dbName
+USER= userName
+PWD= password
+PORT=300

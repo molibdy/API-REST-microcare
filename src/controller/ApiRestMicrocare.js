@@ -8,26 +8,10 @@ let mysql=require ('mysql');
 let cors=require('cors');
 app.use(cors())
 app.listen(port)
-let connection=mysql.createConnection({
-    host: "microcare.c7akwgf5vfhs.eu-west-1.rds.amazonaws.com",
-    database: "microcareDB",
-    user: "admin",
-    password: "Molibden0"
-})
 
 
-let crypto = require('crypto');
 
-//////// HASH CONTRASEÑA 
-let creepy = function (clear) {
-    let salt='molibdeno'
-    let hash = crypto.createHmac('sha256', salt);     // SHA256 at work
-    hash.update(clear);
-    return {
-        salt: salt,
-        hash: hash.digest('hex')
-    };
-};
+
 
 // // (C) TEST ENCRYPT
 // // Save BOTH the password and salt into database or file
