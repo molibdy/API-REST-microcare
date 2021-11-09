@@ -14,6 +14,7 @@ function route(app) {
 	
 	///RECETAS
     app.route('/recetas').get(recetas.get)
+    app.route('/recetas/ricas').get(recetas.getRecetasRichIn)
 
 }
 

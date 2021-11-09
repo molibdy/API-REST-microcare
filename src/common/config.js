@@ -1,5 +1,6 @@
+const dotenv = require('dotenv')
 
-////// LECTOR DE ENV
+dotenv.config({ path: '/env/' })
 
 exports.config={
     port: process.env.PORT || 300,

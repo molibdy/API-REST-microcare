@@ -1,64 +1,23 @@
+const utils=require('../common/utils').utils
 const recetasdb=require('../data/recetasdb').recetasdb
 
 
+
 function get(request,response){
-    let respuesta;
     let filters=request.query
-    console.log(filters);
-    recetasdb.selectRecetas(filters).then(res=>{
-        if(res.length>0){
-            respuesta={error:false, type:1, message: res};
-        }else{
-            respuesta={error:false, type:-1, message: res};
-        } 
-        response.send(respuesta)
-    }).catch(err=>{
-        respuesta={error:true, type:0, message: err};
-        response.send(respuesta)
-    })
+    console.debug(filters);
+    utils.managePromise(recetasdb.selectRecetas(filters),response)
 }
 
 
 
 
-// ///Sacar las recetas ricas en x micronutriente
-// app.get('/recetas/ricas',(request,response)=>{
-//     let respuesta;
-//     let params;
-//     let sql;
-//     if(request.query.micronutrient_id!=null){
-//         params=[request.query.micronutrient_id]
-//         sql=`SELECT recipe_ingredient.recipe_id AS recipe_id, 
-//         ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
-
-//         SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
-//         FROM ingredient_micronutrient
-//         JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
-
-//         WHERE micronutrient_id=?
-//         GROUP BY recipe_id, micronutrient_id
-//         ORDER BY percent DESC
-//         LIMIT 6`
-//     }
-    
-//     connection.query(sql,params,(err,res)=>{
-//         if (err){
-//             respuesta={error:true, type:0, message: err};
-//         }
-//         else{
-//             if(res.length>0){
-//                 respuesta={error:true, code:200, type:1, message: res};
-//             }else{
-//                 if(request.query.recipe_id!=null){
-//                     respuesta={error:true, code:200, type:-1, message: `No existe receta con id ${request.query.recipe_id}`};
-//                 }else{
-//                     respuesta={error:true, code:200, type:-2, message: res};
-//                 }
-               
-//             } response.send(respuesta)
-//         }
-//     })
-// })
+///Sacar las recetas ricas en x micronutriente
+function getRecetasRichIn(request,response){
+    let filters=request.query
+    console.debug(filters);
+    utils.managePromise(recetasdb.selectRecetasRichIn(filters),response)
+}
 
 // app.get('/recetas/detalles',(request,response)=>{
 //     let respuesta;
@@ -359,5 +318,6 @@ function get(request,response){
 
 
 exports.recetas={
-    get:get
+    get:get,
+    getRecetasRichIn,getRecetasRichIn
 }

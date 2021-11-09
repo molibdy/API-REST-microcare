@@ -1,24 +1,12 @@
-
+const utils=require('../common/utils').utils
 const db=require('../common/dbaccess').db.connection
 
 
-function whereCondition(filters){
-    let params=[]
-    let additionalWhere=''
-    if(filters!=undefined){
-        additionalWhere=' where 1=1'
-        for(key in filters){
-            additionalWhere+=' and ' + key + '=?'
-            params.push(filters[key])
-        }
-    }
-    return {sqlWhere:additionalWhere, params:params}
-}
 
 ///// RECETAS
 function selectRecetas(filters){
     return new Promise((resolve,reject)=>{
-        let conditions=whereCondition(filters)
+        let conditions=utils.whereCondition(filters)
         db.query('SELECT * FROM recipes'+conditions.sqlWhere,conditions.params,(err,result)=>{
             if (err){
                 console.log('Hola error');
@@ -31,44 +19,34 @@ function selectRecetas(filters){
         })
     })
 }
+
+
 // ///Sacar las recetas ricas en x micronutriente
-// app.get('/recetas/ricas',(request,response)=>{
-//     let respuesta;
-//     let params;
-//     let sql;
-//     if(request.query.micronutrient_id!=null){
-//         params=[request.query.micronutrient_id]
-//         sql=`SELECT recipe_ingredient.recipe_id AS recipe_id, 
-//         ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
-
-//         SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
-//         FROM ingredient_micronutrient
-//         JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
-
-//         WHERE micronutrient_id=?
-//         GROUP BY recipe_id, micronutrient_id
-//         ORDER BY percent DESC
-//         LIMIT 6`
-//     }
+function selectRecetasRichIn(filters){
+    return new Promise((resolve,reject)=>{
+        let conditions=utils.whereCondition(filters)
+        let sql=`SELECT recipe_ingredient.recipe_id AS recipe_id, 
+        ingredient_micronutrient.micronutrient_id AS micronutrient_id, 
+        SUM(ingredient_micronutrient.micronutrient_percent*recipe_ingredient.grams_serving/ingredient_micronutrient.grams) AS percent
+        FROM ingredient_micronutrient
+        JOIN recipe_ingredient ON recipe_ingredient.ingredient_id=ingredient_micronutrient.ingredient_id
+        WHERE micronutrient_id=?
+        GROUP BY recipe_id, micronutrient_id
+        ORDER BY percent DESC
+        LIMIT 6`;
+        db.query(sql,conditions.params,(err,result)=>{
+            if (err){
+                console.error('Error getting recipes rich in '+filters.micronutrient_id+' --> ',err);
+                reject(err)
+            }
+            else{
+                console.debug('Recipes rich in '+filters.micronutrient_id+' --> ',err);
+                resolve(result)
+            }
+        })
+    })
     
-//     connection.query(sql,params,(err,res)=>{
-//         if (err){
-//             respuesta={error:true, type:0, message: err};
-//         }
-//         else{
-//             if(res.length>0){
-//                 respuesta={error:true, code:200, type:1, message: res};
-//             }else{
-//                 if(request.query.recipe_id!=null){
-//                     respuesta={error:true, code:200, type:-1, message: `No existe receta con id ${request.query.recipe_id}`};
-//                 }else{
-//                     respuesta={error:true, code:200, type:-2, message: res};
-//                 }
-               
-//             } response.send(respuesta)
-//         }
-//     })
-// })
+}
 
 // app.get('/recetas/detalles',(request,response)=>{
 //     let respuesta;
@@ -369,5 +347,6 @@ function selectRecetas(filters){
 
 
 exports.recetasdb={
-    selectRecetas:selectRecetas
+    selectRecetas:selectRecetas,
+    selectRecetasRichIn:selectRecetasRichIn
 }
